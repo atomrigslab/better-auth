@@ -269,65 +269,35 @@ import { BrowserProvider, ethers } from "ethers";
 import { SiweMessage } from "siwe";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
-  const [autoLogin, setAutoLogin] = useState(false);
+  // const [email, setEmail] = useState("");
+  // const [verificationCode, setVerificationCode] = useState("");
+  // const [rememberMe, setRememberMe] = useState(false);
+  // const [autoLogin, setAutoLogin] = useState(false);
 
-  return (
-    <div className="flex h-screen w-screen bg-black">
-      {/* Left section with gradient background */}
-      <div className="relative hidden w-1/2 lg:block">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-600 to-green-400 opacity-90">
-          {/* Blob shapes overlay */}
-          <div className="absolute bottom-0 left-0 h-4/5 w-4/5 rounded-full bg-blue-500/30 blur-3xl"></div>
-          <div className="absolute right-0 top-1/3 h-4/5 w-4/5 rounded-full bg-green-500/30 blur-3xl"></div>
-        </div>
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showConflict, setShowConflict] = useState(false);
 
-        <div className="relative z-10 flex h-full flex-col justify-center p-16 text-white">
-          <h1 className="text-6xl font-bold leading-tight">
-            Welcome
-            <br />
-            Back to GuilPal.
-          </h1>
-          <p className="mt-6 text-xl">A new quest begins now. Are you in?</p>
-        </div>
-      </div>
-
-      <div className="flex w-full flex-col items-center justify-between bg-black lg:w-1/2">
-        <LoginForm />
-        {/* <AuthForm /> */}
-        {/* <AccountConnectedSuccess /> */}
-        {/* <AuthSuccessScreen /> */}
-        {/* <AccountLinkingRequired /> */}
-        {/* <AccountConflictScreen /> */}
-      </div>
-      {/* Right section with login form */}
-      {/* <LoginForm /> */}
-      {/* <AccountConnectedSuccess /> */}
-    </div>
-  );
-}
-
-function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
-  const [autoLogin, setAutoLogin] = useState(false);
-
-  const emailSignIn = async () => {
+  const emailSignIn = async (args: {
+    email: string;
+    verificationCode: string;
+  }) => {
+    const { email, verificationCode } = args;
     const { data, error } = await signIn.emailOtp({
       email,
       otp: verificationCode,
     });
     console.log("sendVerificationOtp result", { data, error });
+    if (error === null) {
+      setShowSuccess(true);
+    }
   };
 
   const socialSignIn = async () => {
     await signIn.social({
       provider: "google",
-      callbackURL: "/sign-in",
+      callbackURL: "/sign-in-success",
     });
+    setShowSuccess(true);
   };
 
   const roninSignIn = async () => {
@@ -374,6 +344,9 @@ function LoginForm() {
         address,
       });
       console.log("result", result);
+
+      // setShowSuccess(true);
+      setShowConflict(true);
     } catch (error) {
       console.error(error);
     }
@@ -427,10 +400,61 @@ function LoginForm() {
         address,
       });
       console.log("result", result);
+      setShowSuccess(true);
     } catch (error) {
       console.error(error);
     }
   };
+
+  return (
+    <div className="flex h-screen w-screen bg-black">
+      {/* Left section with gradient background */}
+      <div className="relative hidden w-1/2 lg:block">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-600 to-green-400 opacity-90">
+          {/* Blob shapes overlay */}
+          <div className="absolute bottom-0 left-0 h-4/5 w-4/5 rounded-full bg-blue-500/30 blur-3xl"></div>
+          <div className="absolute right-0 top-1/3 h-4/5 w-4/5 rounded-full bg-green-500/30 blur-3xl"></div>
+        </div>
+
+        <div className="relative z-10 flex h-full flex-col justify-center p-16 text-white">
+          <h1 className="text-6xl font-bold leading-tight">
+            Welcome
+            <br />
+            Back to GuilPal.
+          </h1>
+          <p className="mt-6 text-xl">A new quest begins now. Are you in?</p>
+        </div>
+      </div>
+
+      <div className="flex w-full flex-col items-center justify-between bg-black lg:w-1/2">
+        {!showSuccess && !showConflict && (
+          <LoginForm
+            emailSignIn={(args) => emailSignIn(args)}
+            socialSignIn={socialSignIn}
+            roninSignIn={roninSignIn}
+            metamaskSignIn={metamaskSignIn}
+          />
+        )}
+        {showSuccess && !showConflict && <AccountConnectedSuccess />}
+        {!showSuccess && showConflict && <AccountLinkingRequired />}
+        {/* <AuthForm /> */}
+        {/* <AccountConnectedSuccess /> */}
+        {/* <AuthSuccessScreen /> */}
+        {/* <AccountLinkingRequired /> */}
+        {/* <AccountConflictScreen /> */}
+      </div>
+      {/* Right section with login form */}
+      {/* <LoginForm /> */}
+      {/* <AccountConnectedSuccess /> */}
+    </div>
+  );
+}
+
+function LoginForm(props: any) {
+  const [email, setEmail] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [autoLogin, setAutoLogin] = useState(false);
 
   return (
     <>
@@ -519,7 +543,7 @@ function LoginForm() {
           {/* Sign In Button */}
           <button
             className="w-full rounded bg-green-500 py-3 font-medium text-white hover:bg-green-600"
-            onClick={emailSignIn}
+            onClick={() => props.emailSignIn({ email, verificationCode })}
           >
             Sign in
           </button>
@@ -534,7 +558,7 @@ function LoginForm() {
           {/* Social Logins */}
           <button
             className="flex w-full items-center justify-center rounded border border-gray-800 py-3 text-white hover:bg-gray-900"
-            onClick={socialSignIn}
+            onClick={() => props.socialSignIn()}
           >
             <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
               <path
@@ -547,7 +571,7 @@ function LoginForm() {
 
           <button
             className="flex w-full items-center justify-center rounded border border-gray-800 py-3 text-white hover:bg-gray-900"
-            onClick={roninSignIn}
+            onClick={() => props.roninSignIn()}
           >
             <svg
               className="mr-2 h-5 w-5 text-blue-400"
@@ -561,7 +585,7 @@ function LoginForm() {
 
           <button
             className="flex w-full items-center justify-center rounded border border-gray-800 py-3 text-white hover:bg-gray-900"
-            onClick={metamaskSignIn}
+            onClick={() => props.metamaskSignIn()}
           >
             <svg
               className="mr-2 h-5 w-5 text-orange-500"
@@ -655,12 +679,12 @@ function AuthSuccessScreen() {
         </div>
 
         {/* Start Button */}
-        <button
+        {/* <button
           onClick={() => {}}
           className="bg-emerald-600 text-gray-900 font-bold py-3 px-6 rounded-full w-full transition-all hover:bg-emerald-500"
         >
           시작하기
-        </button>
+        </button> */}
       </div>
 
       {/* Footer */}
@@ -1340,9 +1364,9 @@ function AccountConnectedSuccess() {
           </div>
 
           {/* Start button */}
-          <button className="w-full rounded bg-green-500 py-3 font-medium text-white hover:bg-green-600">
+          {/* <button className="w-full rounded bg-green-500 py-3 font-medium text-white hover:bg-green-600">
             시작하기
-          </button>
+          </button> */}
         </div>
       </div>
 
