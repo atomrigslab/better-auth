@@ -26,12 +26,13 @@ export default function RootLayout({
 				<link rel="icon" href="/favicon/favicon.ico" sizes="any" />
 			</head>
 			<body className={`${GeistSans.variable} ${GeistMono.variable} font-sans`}>
-				<ThemeProvider attribute="class" defaultTheme="dark">
+				{/* <ThemeProvider attribute="class" defaultTheme="dark">
 					<Wrapper>
 						<WrapperWithQuery>{children}</WrapperWithQuery>
 					</Wrapper>
 					<Toaster richColors closeButton />
-				</ThemeProvider>
+				</ThemeProvider> */}
+				{children}
 			</body>
 		</html>
 	);
