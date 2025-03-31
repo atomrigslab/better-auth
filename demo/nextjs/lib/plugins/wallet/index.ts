@@ -132,7 +132,7 @@ export const siwe = (options: SIWEPluginOptions) =>
 						// let user = undefined;
 
 						if (!user) {
-							// const tempEmail = `${ctx.body.address}@${process.env.NEXT_PUBLIC_BASE_URL}`;
+							const tempEmail = `${ctx.body.address}@${process.env.BETTER_AUTH_URL}`;
 							// const ens = await getEnsName(wagmiConfig, {
 							// 	address: ctx.body.address as `0x${string}`,
 							// 	chainId: options.chainId ?? 1
@@ -148,7 +148,7 @@ export const siwe = (options: SIWEPluginOptions) =>
 								// email: tempEmail,
 								// avatar: avatar ?? ''
 								name: ctx.body.address,
-								email: '',
+								email: tempEmail,
 								address: ctx.body.address,
 								avatar: '',
 								// mid: 'fake-mid'

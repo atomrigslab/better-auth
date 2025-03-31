@@ -263,7 +263,10 @@
 //   );
 // }
 
+import { emailOtp, signIn } from "@/lib/auth-client";
 import { useState } from "react";
+import { BrowserProvider, ethers } from "ethers";
+import { SiweMessage } from "siwe";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -312,6 +315,123 @@ function LoginForm() {
   const [rememberMe, setRememberMe] = useState(false);
   const [autoLogin, setAutoLogin] = useState(false);
 
+  const emailSignIn = async () => {
+    const { data, error } = await signIn.emailOtp({
+      email,
+      otp: verificationCode,
+    });
+    console.log("sendVerificationOtp result", { data, error });
+  };
+
+  const socialSignIn = async () => {
+    await signIn.social({
+      provider: "google",
+      callbackURL: "/sign-in",
+    });
+  };
+
+  const roninSignIn = async () => {
+    try {
+      if (!window?.ronin?.provider) {
+        alert("no ronin provider found");
+        return;
+      }
+
+      const provider = new BrowserProvider(window?.ronin?.provider);
+      const addresses = await provider.send("eth_requestAccounts", []);
+
+      const scheme = window.location.protocol.slice(0, -1);
+      const domain = window.location.host;
+      const origin = window.location.origin;
+      const address = ethers.getAddress(addresses[0]);
+
+      const signer = await provider.getSigner();
+      const nonce = await signIn.nonce({ address });
+      if (nonce.error) {
+        alert("fetching nonce failed");
+        return;
+      }
+
+      const statement = "Sign in with Ethereum to the app.";
+      const message = new SiweMessage({
+        scheme,
+        domain,
+        address,
+        statement,
+        uri: origin,
+        version: "1",
+        nonce: nonce.data?.nonce,
+        chainId: 1,
+      });
+      const messageToSign = message.prepareMessage();
+
+      const signature = await signer.signMessage(messageToSign);
+      console.log("signature and messageToSign", { signature, messageToSign });
+
+      const result = await signIn.verify({
+        message: messageToSign,
+        signature,
+        address,
+      });
+      console.log("result", result);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const metamaskSignIn = async () => {
+    try {
+      if (!window?.ethereum) {
+        alert("no ethereum provider found");
+        return;
+      }
+      if (!window?.ethereum?.isMetaMask) {
+        alert("no metamask wallet found");
+        return;
+      }
+
+      const provider = new BrowserProvider(window?.ethereum);
+      const addresses = await provider.send("eth_requestAccounts", []);
+
+      const scheme = window.location.protocol.slice(0, -1);
+      const domain = window.location.host;
+      const origin = window.location.origin;
+      const address = ethers.getAddress(addresses[0]);
+
+      const signer = await provider.getSigner();
+      const nonce = await signIn.nonce({ address });
+      if (nonce.error) {
+        alert("fetching nonce failed");
+        return;
+      }
+
+      const statement = "Sign in with Ethereum to the app.";
+      const message = new SiweMessage({
+        scheme,
+        domain,
+        address,
+        statement,
+        uri: origin,
+        version: "1",
+        nonce: nonce.data?.nonce,
+        chainId: 1,
+      });
+      const messageToSign = message.prepareMessage();
+
+      const signature = await signer.signMessage(messageToSign);
+      console.log("signature and messageToSign", { signature, messageToSign });
+
+      const result = await signIn.verify({
+        message: messageToSign,
+        signature,
+        address,
+      });
+      console.log("result", result);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   return (
     <>
       <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center px-8">
@@ -350,7 +470,16 @@ function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-gray-700 px-2 py-1 text-xs text-white hover:bg-gray-600">
+            <button
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-gray-700 px-2 py-1 text-xs text-white hover:bg-gray-600"
+              onClick={async () => {
+                const { data, error } = await emailOtp.sendVerificationOtp({
+                  email,
+                  type: "sign-in", // or "email-verification", "forget-password"
+                });
+                console.log("sendVerificationOtp result", { data, error });
+              }}
+            >
               Verify Email
             </button>
           </div>
@@ -388,7 +517,10 @@ function LoginForm() {
           </div> */}
 
           {/* Sign In Button */}
-          <button className="w-full rounded bg-green-500 py-3 font-medium text-white hover:bg-green-600">
+          <button
+            className="w-full rounded bg-green-500 py-3 font-medium text-white hover:bg-green-600"
+            onClick={emailSignIn}
+          >
             Sign in
           </button>
 
@@ -400,7 +532,10 @@ function LoginForm() {
           </div>
 
           {/* Social Logins */}
-          <button className="flex w-full items-center justify-center rounded border border-gray-800 py-3 text-white hover:bg-gray-900">
+          <button
+            className="flex w-full items-center justify-center rounded border border-gray-800 py-3 text-white hover:bg-gray-900"
+            onClick={socialSignIn}
+          >
             <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
@@ -410,14 +545,10 @@ function LoginForm() {
             Sign in with Google
           </button>
 
-          {/* <button className="flex w-full items-center justify-center rounded border border-gray-800 py-3 text-white hover:bg-gray-900">
-        <svg className="mr-2 h-5 w-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-        </svg>
-        Sign in with Facebook
-      </button> */}
-
-          <button className="flex w-full items-center justify-center rounded border border-gray-800 py-3 text-white hover:bg-gray-900">
+          <button
+            className="flex w-full items-center justify-center rounded border border-gray-800 py-3 text-white hover:bg-gray-900"
+            onClick={roninSignIn}
+          >
             <svg
               className="mr-2 h-5 w-5 text-blue-400"
               viewBox="0 0 24 24"
@@ -428,7 +559,10 @@ function LoginForm() {
             Sign in with Ronin Wallet
           </button>
 
-          <button className="flex w-full items-center justify-center rounded border border-gray-800 py-3 text-white hover:bg-gray-900">
+          <button
+            className="flex w-full items-center justify-center rounded border border-gray-800 py-3 text-white hover:bg-gray-900"
+            onClick={metamaskSignIn}
+          >
             <svg
               className="mr-2 h-5 w-5 text-orange-500"
               viewBox="0 0 24 24"

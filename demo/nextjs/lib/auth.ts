@@ -61,6 +61,15 @@ export const auth = betterAuth({
   // 	dialect,
   // 	type: process.env.USE_MYSQL ? "mysql" : "sqlite",
   // },
+  user: {
+    additionalFields: {
+      mid: {
+				type: 'string',
+				required: false,
+				defaultValue: ''
+      }
+    }
+  },
   database: db,
   emailVerification: {
     async sendVerificationEmail({ user, url }) {
