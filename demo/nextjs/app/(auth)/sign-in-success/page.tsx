@@ -1,6 +1,13 @@
 "use client";
 
+import { pga } from "@/lib/auth-client";
+import { useEffect } from "react";
+
 export default function Page() {
+  useEffect(() => {
+    pga.addMid({ encryptedMid: "fake-mid-1" });
+  }, [])
+
   return (
     <div className="w-full">
       <div className="flex h-screen w-screen bg-black">

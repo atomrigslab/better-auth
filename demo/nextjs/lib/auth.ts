@@ -65,13 +65,13 @@ export const auth = betterAuth({
   // 	type: process.env.USE_MYSQL ? "mysql" : "sqlite",
   // },
   user: {
-    additionalFields: {
-      mid: {
-        type: "string",
-        required: false,
-        defaultValue: "",
-      },
-    },
+    // additionalFields: {
+    //   mid: {
+    //     type: "string",
+    //     required: false,
+    //     defaultValue: "",
+    //   },
+    // },
     changeEmail: {
       enabled: true,
     },

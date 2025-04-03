@@ -42,6 +42,7 @@ export const pga = () => {
         },
         async (ctx) => {
           // TODO: decode mid
+          const mid = ctx.body.encryptedMid;
           const id = generateId();
           const existingSession = await getSessionFromCtx(ctx);
           if (!existingSession) {
@@ -49,18 +50,28 @@ export const pga = () => {
               message: ERROR_CODES.UNAUTHORIZED_SESSION,
             });
           }
-          let insertStatement = db
+          const pga = db
+            .prepare("SELECT * FROM pga WHERE userId = ? AND mid = ?")
+            .get(existingSession.user.id, mid);
+          if (pga) {
+            console.log("pga exist with", {
+              userId: existingSession.user.id,
+              mid,
+            });
+            return;
+          }
+
+          const insertStatement = db
             .prepare(
               "INSERT INTO pga (id, userId, mid, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)"
             )
             .run(
               id,
               existingSession.user.id,
-              ctx.body.encryptedMid,
+              mid,
               new Date().toISOString(),
               new Date().toISOString()
             );
-
           console.log("insertStatement", insertStatement);
         }
       ),

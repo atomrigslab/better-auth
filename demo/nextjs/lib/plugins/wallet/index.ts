@@ -4,7 +4,7 @@ import {
   //   type User,
   // setSessionCookie
 } from "better-auth";
-import { APIError, createAuthEndpoint } from "better-auth/api";
+import { APIError, createAuthEndpoint, getSessionFromCtx } from "better-auth/api";
 
 // Database Instance
 // import { db } from '@repo/db/drizzle';
@@ -19,6 +19,7 @@ import { SiweMessage, generateNonce } from "siwe";
 // import { mainnet, sepolia } from '@wagmi/core/chains';
 import { setSessionCookie } from "better-auth/cookies";
 import { db } from "@/lib/db";
+import { ERROR_CODES } from "better-auth/plugins";
 
 export interface SIWEPluginOptions {
   domain: string;
@@ -47,11 +48,6 @@ export const siwe = (options: SIWEPluginOptions) =>
             required: false,
             defaultValue: "",
             // unique: true
-          },
-          mid: {
-            type: "string",
-            required: false,
-            defaultValue: "",
           },
         },
       },
@@ -196,6 +192,92 @@ export const siwe = (options: SIWEPluginOptions) =>
 
             return ctx.json({ token: session.token });
           } catch (error: any) {
+            if (error instanceof APIError) throw error;
+            throw new APIError("UNAUTHORIZED", {
+              message: "Something went wrong. Please try again later.",
+              error: error.message,
+            });
+          }
+        }
+      ),
+
+      link: createAuthEndpoint(
+        "/sign-in/wallet-link",
+        {
+          method: "POST",
+          body: z.object({
+            message: z.string(),
+            signature: z.string(),
+            address: z.string(),
+          }),
+        },
+        async (ctx) => {
+          const { message, signature } = ctx.body;
+          // Parse and validate SIWE message
+          const siweMessage = new SiweMessage(message);
+
+          try {
+            // Find stored nonce to check it's validity
+            const verification =
+              await ctx.context.internalAdapter.findVerificationValue(
+                `siwe_${ctx.body.address.toLowerCase()}`
+              );
+            // Ensure nonce is valid and not expired
+            if (!verification || new Date() > verification.expiresAt) {
+              throw new APIError("UNAUTHORIZED", {
+                message: "Unauthorized: Invalid or expired nonce",
+              });
+            }
+            // Verify SIWE message
+            const verified = await siweMessage.verify({
+              signature,
+              nonce: verification.value,
+              // domain: options.domain,
+            });
+            console.log("verified", verified)
+
+            if (!verified.success) {
+              throw new APIError("UNAUTHORIZED", {
+                message: "Unauthorized: Invalid SIWE signature",
+              });
+            }
+
+            const existingSession = await getSessionFromCtx(ctx);
+            console.log("existingSession", existingSession)
+            if (!existingSession) {
+              throw new APIError("BAD_REQUEST", {
+                message: ERROR_CODES.UNAUTHORIZED_SESSION,
+              });
+            }
+
+            const user = await ctx.context.internalAdapter.updateUser(
+              existingSession.user?.id,
+              {
+                address: ctx.body.address,
+              },
+              ctx
+            );
+
+            const session = await ctx.context.internalAdapter.createSession(
+              user?.id,
+              ctx.request
+            );
+
+            if (!session) {
+              return ctx.json(null, {
+                status: 500,
+                body: {
+                  message: "Internal Server Error",
+                  status: 500,
+                },
+              });
+            }
+
+            await setSessionCookie(ctx, { session, user });
+
+            return ctx.json({ token: session.token });
+          } catch (error: any) {
+            console.log("error", error)
             if (error instanceof APIError) throw error;
             throw new APIError("UNAUTHORIZED", {
               message: "Something went wrong. Please try again later.",

@@ -283,7 +283,6 @@ export default function Login() {
 
   const [showSuccess, setShowSuccess] = useState(false);
   const [showConflict, setShowConflict] = useState(false);
-  const [showAccountConnect, setShowAccountConnect] = useState(false);
   const [pgaUser, setPgaUser] = useState({});
 
   useEffect(() => {
@@ -294,84 +293,39 @@ export default function Login() {
     const pgaUser = await pga.getUserByMid({
       query: { encryptedMid: "fake-mid-1" },
     });
-    console.log("pgaUser", pgaUser);
     if (pgaUser.error) return;
     setPgaUser(pgaUser?.data);
-    // console.log("pgaUser", pgaUser);
-    // if (!pgaUser?.data?.user) {
-    //   // not signed up yet with the given mid
-    //   // proceed sign up with any auth method in this case
-    //   return;
-    // } else {
-    //   // signed up already with the given mid by social or email or wallet auth
-    //   // if user selects auth method which is not used yet (social then treat like email is used!)
-    //   // then link this auth method automatically
-    //   // if user selects auth method already used then sign-in process
-    // }
-    // const isGoogleLink = !pgaUser?.data.accounts.find(a => a.providerId === '');
-    // const isEmailLink = pgaUser?.data?.user.emailVerified === false
   };
 
   const emailSignIn = async (args: {
     email: string;
     verificationCode: string;
   }) => {
-    const isLinked = pgaUser?.user && !pgaUser?.user?.emailVerified;
-    if (!isLinked) {
-      const { email, verificationCode } = args;
-      const { data, error } = await signIn.emailOtpLink({
-        email,
-        otp: verificationCode,
-      });
-      console.log("emailSignInLink result", { data, error });
-      if (error === null) {
-        setShowSuccess(true);
-      }
-    } else {
-      const { email, verificationCode } = args;
-      const { data, error } = await signIn.emailOtp({
-        email,
-        otp: verificationCode,
-      });
-      console.log("emailSignIn result", { data, error });
-      if (error === null) {
-        setShowSuccess(true);
-      }
+    // const isLinked =
+    //   !!pgaUser?.data?.user && !!pgaUser?.data?.user?.emailVerified;
+    const { email, verificationCode } = args;
+    const { data, error } = await signIn.emailOtp({
+      email,
+      otp: verificationCode,
+    });
+    console.log("emailSignIn result", { data, error });
+    if (error === null) {
+      setShowSuccess(true);
     }
+    await pga.addMid({ encryptedMid: "fake-mid-1" });
   };
 
-  // const emailSignInLink = async (args: {
-  //   email: string;
-  //   verificationCode: string;
-  // }) => {
-  //   const { email, verificationCode } = args;
-  //   const { data, error } = await signIn.emailOtpLink({
-  //     email,
-  //     otp: verificationCode,
-  //   });
-  //   console.log("emailSignInLink result", { data, error });
-  //   if (error === null) {
-  //     setShowSuccess(true);
-  //   }
-  // };
-
   const socialSignIn = async () => {
-    const isLinked =
-      pgaUser?.user &&
-      !pgaUser?.accounts?.find((a) => a.providerId === "google");
-    if (isLinked) {
-      await linkSocial({
-        provider: "google", // Provider to link
-        callbackURL: "/link-success",
-      });
-    } else {
-      await signIn.social({
-        provider: "google",
-        callbackURL: "/sign-in-success",
-      });
-    }
-    // providerId === "google"
-    setShowSuccess(true);
+    // const isLinked =
+    //   pgaUser?.user &&
+    //   !pgaUser?.accounts?.find((a) => a.providerId === "google");
+    await signIn.social({
+      provider: "google",
+      callbackURL: "/sign-in-success",
+    });
+
+    // await pga.addMid({ encryptedMid: "fake-mid-1" });
+    // setShowSuccess(true);
   };
 
   const roninSignIn = async () => {
@@ -421,7 +375,7 @@ export default function Login() {
 
       // setShowSuccess(true);
       // setShowConflict(true);
-      setShowAccountConnect(true);
+      // setShowAccountConnect(true);
 
       await pga.addMid({ encryptedMid: "fake-mid-1" });
       console.log("add mid success");
@@ -527,7 +481,7 @@ export default function Login() {
       </div>
 
       <div className="flex w-full flex-col items-center justify-between bg-black lg:w-1/2">
-        {!showSuccess && !showConflict && !showAccountConnect && (
+        {!showSuccess && !showConflict && (
           <LoginForm
             emailSignIn={(args) => emailSignIn(args)}
             // emailSignIn={(args) => emailSignInLink(args)}
@@ -538,11 +492,11 @@ export default function Login() {
         )}
         {/* {showSuccess && !showConflict && <AccountConnectedSuccess />}
         {!showSuccess && showConflict && <AccountLinkingRequired />} */}
-        {showAccountConnect && (
+        {/* {showAccountConnect && (
           <AccountConnect
             connectGoogleFromWalletUser={connectGoogleFromWalletUser}
           />
-        )}
+        )} */}
         {/* <AuthForm /> */}
         {/* <AccountConnectedSuccess /> */}
         {/* <AuthSuccessScreen /> */}
