@@ -11,8 +11,11 @@ import {
 } from "better-auth/client/plugins";
 import { toast } from "sonner";
 import { stripeClient } from "@better-auth/stripe/client";
-import { emailOTPClient } from 'better-auth/client/plugins';
+// import { emailOTPClient } from 'better-auth/client/plugins';
 import { siweClientPlugin } from "./plugins/wallet/client";
+import { emailOTPClient } from "./plugins/email-otp/client";
+import { oauthLinkClient } from "./plugins/oauth/client";
+import { pgaClientPlugin } from "./plugins/pga/client";
 
 export const client = createAuthClient({
 	plugins: [
@@ -38,6 +41,8 @@ export const client = createAuthClient({
 		// }),
 		emailOTPClient(),
 		siweClientPlugin(),
+		pgaClientPlugin(),
+		// oauthLinkClient(),
 	],
 	fetchOptions: {
 		onError(e) {
@@ -56,7 +61,10 @@ export const {
 	// organization,
 	// useListOrganizations,
 	// useActiveOrganization,
+	linkSocial,
+	updateUser,
 	emailOtp,
+	pga,
 } = client;
 
 client.$store.listen("$sessionSignal", async () => {});

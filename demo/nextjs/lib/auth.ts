@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, parseState } from "better-auth";
 import {
   bearer,
   admin,
@@ -10,6 +10,7 @@ import {
   openAPI,
   oidcProvider,
   customSession,
+  createAuthMiddleware,
 } from "better-auth/plugins";
 import { reactInvitationEmail } from "./email/invitation";
 import { LibsqlDialect } from "@libsql/kysely-libsql";
@@ -22,9 +23,11 @@ import { passkey } from "better-auth/plugins/passkey";
 import { stripe } from "@better-auth/stripe";
 import { Stripe } from "stripe";
 import Database from "better-sqlite3";
-import { emailOTP } from "better-auth/plugins";
 import { Resend } from "resend";
-import { siwe } from "./plugins/wallet";
+import { emailOTP, siwe } from "@/lib/plugins";
+import { getSessionFromCtx } from "better-auth/api";
+import { setSessionCookie } from "better-auth/cookies";
+import { pga } from "./plugins/pga";
 
 const from = process.env.BETTER_AUTH_EMAIL || "delivered@resend.dev";
 const to = process.env.TEST_EMAIL || "";
@@ -64,24 +67,27 @@ export const auth = betterAuth({
   user: {
     additionalFields: {
       mid: {
-				type: 'string',
-				required: false,
-				defaultValue: ''
-      }
-    }
-  },
-  database: db,
-  emailVerification: {
-    async sendVerificationEmail({ user, url }) {
-      const res = await resend.emails.send({
-        from,
-        to: to || user.email,
-        subject: "Verify your email address",
-        html: `<a href="${url}">Verify your email address</a>`,
-      });
-      console.log(res, user.email);
+        type: "string",
+        required: false,
+        defaultValue: "",
+      },
+    },
+    changeEmail: {
+      enabled: true,
     },
   },
+  database: db,
+  // emailVerification: {
+  //   async sendVerificationEmail({ user, url }) {
+  //     const res = await resend.emails.send({
+  //       from,
+  //       to: to || user.email,
+  //       subject: "Verify your email address",
+  //       html: `<a href="${url}">Verify your email address</a>`,
+  //     });
+  //     console.log(res, user.email);
+  //   },
+  // },
   account: {
     accountLinking: {
       // trustedProviders: ["google", "github", "demo-app"],
@@ -106,14 +112,21 @@ export const auth = betterAuth({
     google: {
       clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      // disableImplicitSignUp: true,
+    },
+  },
+  onAPIError: {
+    onError: (e) => {
+      console.log("auth.ts onAPIError onError");
+      console.error(e);
     },
   },
   plugins: [
-    siwe({ domain: 'https://www.domain.com' }),
+    siwe({ domain: "https://www.domain.com" }),
     emailOTP({
       async sendVerificationOTP({ email, otp, type }) {
         // Implement the sendVerificationOTP method to send the OTP to the user's email address
-		const resend = new Resend('re_ARsd8UNU_4EBJhanhfpXHBxiALTZNZ7rA');
+        const resend = new Resend("re_ARsd8UNU_4EBJhanhfpXHBxiALTZNZ7rA");
         await resend.emails.send({
           from: "onboarding@resend.dev",
           to: email,
@@ -129,7 +142,10 @@ export const auth = betterAuth({
         //     // Send the OTP for password reset
         // }
       },
+      disableSignUp: true,
     }),
+    pga(),
+    // linkOAuth(),
     // organization({
     // 	async sendInvitationEmail(data) {
     // 		await resend.emails.send({
@@ -169,4 +185,131 @@ export const auth = betterAuth({
     // 	};
     // }),
   ],
+  hooks: {
+    after: createAuthMiddleware(async (ctx) => {
+      // if (ctx.path.startsWith("/sign-in/email-otp")) {
+      //   console.log("/sign-in/email-otp after hook");
+      //   console.log(Object.keys(ctx.context.returned));
+      //   console.log(Object.values(ctx.context.returned));
+      //   // console.log(ctx.context.session)
+      //   console.log(ctx.query);
+      //   // const isUserNotFound = Object.values(ctx.context.returned).find(
+      //   //   (item) => item?.code === "USER_NOT_FOUND"
+      //   // );
+      //   const isUserNotFound =
+      //     ctx.context.returned?.body?.code === "USER_NOT_FOUND";
+      //   console.log("isUserNotFound", isUserNotFound);
+
+      //   const existingSession = await getSessionFromCtx(ctx);
+      //   if (!existingSession) {
+      //     return;
+      //   }
+      //   console.log("getSessionFromCtx", existingSession?.session);
+
+      //   if (!isUserNotFound) return;
+
+      //   if (ctx.query.link) {
+      //     const updatedUser = await ctx.context.internalAdapter.updateUser(
+      //       existingSession.user.id,
+      //       {
+      //         email: ctx.body.email,
+      //         emailVerified: true,
+      //       },
+      //       ctx
+      //     );
+
+      //     const session = await ctx.context.internalAdapter.createSession(
+      //       existingSession.user.id,
+      //       ctx.request
+      //     );
+      //     await setSessionCookie(ctx, {
+      //       session,
+      //       user: updatedUser,
+      //     });
+      //     return ctx.json({
+      //       token: session.token,
+      //       user: {
+      //         id: updatedUser.id,
+      //         email: updatedUser.email,
+      //         emailVerified: updatedUser.emailVerified,
+      //         name: updatedUser.name,
+      //         image: updatedUser.image,
+      //         createdAt: updatedUser.createdAt,
+      //         updatedAt: updatedUser.updatedAt,
+      //       },
+      //     });
+      //   } else {
+      //     //
+      //   }
+
+      //   // update email and emailVerified as this error only happens when linking email auth to existing walle user
+      //   //
+
+      //   // const newSession = ctx.context.newSession;
+      //   // if (newSession) {
+      //   //   console.log("/sign-in/email-otp after hook newSession", newSession);
+      //   // }
+      // }
+
+      // if (ctx.path.startsWith("/callback")) {
+      //   const {
+      //     codeVerifier,
+      //     callbackURL,
+      //     link,
+      //     errorURL,
+      //     newUserURL,
+      //     requestSignUp,
+      //   } = await parseState(ctx);
+
+      //   if (link) {
+      //     const existingSession = await getSessionFromCtx(ctx);
+      //     if (!existingSession) {
+      //       return;
+      //     }
+      //     await ctx.context.internalAdapter.updateUser(
+      //       existingSession.user.id,
+      //       {
+      //         email: link.email,
+      //         emailVerified: true,
+      //       },
+      //       ctx
+      //     );
+
+      //     // const existingAccount = await ctx.context.internalAdapter.findAccount(
+      //     //   userInfo.id,
+      //     // );
+
+      //     // if (existingAccount) {
+      //     //   if (existingAccount.userId.toString() !== link.userId.toString()) {
+      //     //     return redirectOnError("account_already_linked_to_different_user");
+      //     //   }
+      //     // }
+
+      //     // const newAccount = await c.context.internalAdapter.createAccount(
+      //     //   {
+      //     //     userId: link.userId,
+      //     //     providerId: provider.id,
+      //     //     accountId: userInfo.id,
+      //     //     ...tokens,
+      //     //     scope: tokens.scopes?.join(","),
+      //     //   },
+      //     //   c,
+      //     // );
+
+      //     // if (!newAccount) {
+      //     //   return redirectOnError("unable_to_link_account");
+      //     // }
+
+      //     // let toRedirectTo: string;
+      //     // try {
+      //     //   const url = callbackURL;
+      //     //   toRedirectTo = url.toString();
+      //     // } catch {
+      //     //   toRedirectTo = callbackURL;
+      //     // }
+      //     // throw c.redirect(toRedirectTo);
+      //   }
+      // }
+    }),
+  },
 });

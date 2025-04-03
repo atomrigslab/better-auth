@@ -146,6 +146,19 @@ export const callbackOAuth = createAuthEndpoint(
 				return redirectOnError("unable_to_link_account");
 			}
 
+			const updateduser = await c.context.internalAdapter.updateUser(
+				link.userId,
+				{
+				  email: userInfo.email,
+				  emailVerified: true,
+				},
+				c
+			);
+
+			if (!updateduser) {
+				return redirectOnError("unable_to_update_user");
+			}
+
 			let toRedirectTo: string;
 			try {
 				const url = callbackURL;

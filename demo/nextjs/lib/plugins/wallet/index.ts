@@ -1,31 +1,31 @@
-import { generateId } from 'better-auth';
+import { generateId } from "better-auth";
 import {
-	type BetterAuthPlugin
-	//   type User,
-	// setSessionCookie
-} from 'better-auth';
-import { APIError, createAuthEndpoint } from 'better-auth/api';
+  type BetterAuthPlugin,
+  //   type User,
+  // setSessionCookie
+} from "better-auth";
+import { APIError, createAuthEndpoint } from "better-auth/api";
 
 // Database Instance
 // import { db } from '@repo/db/drizzle';
 // import { eq, user as userTable } from '@@repo/db/schema';
 
 // Zod
-import { z } from 'zod';
+import { z } from "zod";
 
 // SIWE deps
-import { SiweMessage, generateNonce } from 'siwe';
+import { SiweMessage, generateNonce } from "siwe";
 // import { http, createConfig, getEnsName, getEnsAvatar } from '@wagmi/core';
 // import { mainnet, sepolia } from '@wagmi/core/chains';
-import { setSessionCookie } from 'better-auth/cookies';
-import { db } from '@/lib/db';
+import { setSessionCookie } from "better-auth/cookies";
+import { db } from "@/lib/db";
 
 export interface SIWEPluginOptions {
-	domain: string;
-	// Optional configuration
-	chainId?: 1 | 11155111 | undefined;
-	version?: string;
-	resources?: string[];
+  domain: string;
+  // Optional configuration
+  chainId?: 1 | 11155111 | undefined;
+  version?: string;
+  resources?: string[];
 }
 
 // export const wagmiConfig = createConfig({
@@ -37,158 +37,172 @@ export interface SIWEPluginOptions {
 // });
 
 export const siwe = (options: SIWEPluginOptions) =>
-	({
-		id: 'siwe',
-		schema: {
-			user: {
-				fields: {
-					address: {
-						type: 'string',
-						required: false,
-						defaultValue: ''
-						// unique: true
-					},
-					mid: {
-						type: 'string',
-						required: false,
-						defaultValue: ''
-					}
-				}
-			}
-		},
-		endpoints: {
-			// Generate nonce endpoint
-			nonce: createAuthEndpoint(
-				'/sign-in/nonce',
-				{
-					method: 'POST',
-					body: z.object({
-						address: z.string()
-					})
-				},
-				async (ctx) => {
-					const nonce = generateNonce();
-					// Store nonce with 15-minute expiration
-					await ctx.context.internalAdapter.createVerificationValue({
-						id: generateId(),
-						identifier: `siwe_${ctx.body.address.toLowerCase()}`,
-						value: nonce,
-						expiresAt: new Date(Date.now() + 15 * 60 * 1000)
-					});
+  ({
+    id: "siwe",
+    schema: {
+      user: {
+        fields: {
+          address: {
+            type: "string",
+            required: false,
+            defaultValue: "",
+            // unique: true
+          },
+          mid: {
+            type: "string",
+            required: false,
+            defaultValue: "",
+          },
+        },
+      },
+    },
+    endpoints: {
+      // Generate nonce endpoint
+      nonce: createAuthEndpoint(
+        "/sign-in/nonce",
+        {
+          method: "POST",
+          body: z.object({
+            address: z.string(),
+          }),
+        },
+        async (ctx) => {
+          const nonce = generateNonce();
+          // Store nonce with 15-minute expiration
+          await ctx.context.internalAdapter.createVerificationValue({
+            id: generateId(),
+            identifier: `siwe_${ctx.body.address.toLowerCase()}`,
+            value: nonce,
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+          });
 
-					return { nonce };
-				}
-			),
-			// Verify siwe payload
-			verify: createAuthEndpoint(
-				'/sign-in/verify',
-				{
-					method: 'POST',
-					body: z.object({
-						message: z.string(),
-						signature: z.string(),
-						address: z.string()
-					})
-				},
-				async (ctx) => {
-					const { message, signature } = ctx.body;
-					// Parse and validate SIWE message
-					const siweMessage = new SiweMessage(message);
+          return { nonce };
+        }
+      ),
+      // Verify siwe payload
+      verify: createAuthEndpoint(
+        "/sign-in/verify",
+        {
+          method: "POST",
+          body: z.object({
+            message: z.string(),
+            signature: z.string(),
+            address: z.string(),
+          }),
+        },
+        async (ctx) => {
+          const { message, signature } = ctx.body;
+          // Parse and validate SIWE message
+          const siweMessage = new SiweMessage(message);
 
-					try {
-						// Find stored nonce to check it's validity
-						const verification = await ctx.context.internalAdapter.findVerificationValue(
-							`siwe_${ctx.body.address.toLowerCase()}`
-						);
-						// Ensure nonce is valid and not expired
-						if (!verification || new Date() > verification.expiresAt) {
-							throw new APIError('UNAUTHORIZED', {
-								message: 'Unauthorized: Invalid or expired nonce'
-							});
-						}
-						// Verify SIWE message
-						const verified = await siweMessage.verify({
-							signature,
-							nonce: verification.value
-							// domain: options.domain,
-						});
+          try {
+            // Find stored nonce to check it's validity
+            const verification =
+              await ctx.context.internalAdapter.findVerificationValue(
+                `siwe_${ctx.body.address.toLowerCase()}`
+              );
+            // Ensure nonce is valid and not expired
+            if (!verification || new Date() > verification.expiresAt) {
+              throw new APIError("UNAUTHORIZED", {
+                message: "Unauthorized: Invalid or expired nonce",
+              });
+            }
+            // Verify SIWE message
+            const verified = await siweMessage.verify({
+              signature,
+              nonce: verification.value,
+              // domain: options.domain,
+            });
 
-						if (!verified.success) {
-							throw new APIError('UNAUTHORIZED', {
-								message: 'Unauthorized: Invalid SIWE signature'
-							});
-						}
+            if (!verified.success) {
+              throw new APIError("UNAUTHORIZED", {
+                message: "Unauthorized: Invalid SIWE signature",
+              });
+            }
 
-						// Delete used nonce to prevent replay attacks
-						// now moved to n after hook on /sign-out route
-						// await ctx.context.internalAdapter.deleteVerificationValue(
-						//   verification.id
-						// );
+            // Delete used nonce to prevent replay attacks
+            // now moved to n after hook on /sign-out route
+            // await ctx.context.internalAdapter.deleteVerificationValue(
+            //   verification.id
+            // );
 
-						// const mid = 'fake-mid';
-						let user = db.prepare('SELECT * FROM user WHERE address = ?').get(ctx.body.address);
-						console.log('existing user', { value: user, type: typeof user });
+            // const mid = 'fake-mid';
+            let user = db
+              .prepare("SELECT * FROM user WHERE address = ?")
+              .get(ctx.body.address);
+            console.log("existing user", { value: user, type: typeof user });
 
-						// let user = undefined;
+            // let user = undefined;
 
-						if (!user) {
-							const tempEmail = `${ctx.body.address}@${process.env.BETTER_AUTH_URL}`;
-							// const ens = await getEnsName(wagmiConfig, {
-							// 	address: ctx.body.address as `0x${string}`,
-							// 	chainId: options.chainId ?? 1
-							// });
+            if (!user) {
+              const tempEmail = `${ctx.body.address}@${process.env.BETTER_AUTH_URL}`;
+              // const ens = await getEnsName(wagmiConfig, {
+              // 	address: ctx.body.address as `0x${string}`,
+              // 	chainId: options.chainId ?? 1
+              // });
 
-							// const avatar = await getEnsAvatar(wagmiConfig, {
-							// 	name: (ens as string) ?? ctx.body.address,
-							// 	chainId: options.chainId ?? 1
-							// });
+              // const avatar = await getEnsAvatar(wagmiConfig, {
+              // 	name: (ens as string) ?? ctx.body.address,
+              // 	chainId: options.chainId ?? 1
+              // });
 
-							user = await ctx.context.internalAdapter.createUser({
-								// name: ens ?? ctx.body.address,
-								// email: tempEmail,
-								// avatar: avatar ?? ''
-								name: ctx.body.address,
-								email: tempEmail,
-								address: ctx.body.address,
-								avatar: '',
-								// mid: 'fake-mid'
-							});
+              user = await ctx.context.internalAdapter.createUser({
+                // name: ens ?? ctx.body.address,
+                // email: tempEmail,
+                // avatar: avatar ?? ''
+                name: ctx.body.address,
+                email: tempEmail,
+                address: ctx.body.address,
+                avatar: "",
+                // mid: 'fake-mid'
+              });
 
-							// user = await ctx.context.internalAdapter.createUser({
-							// 	// name: ens ?? ctx.body.address,
-							// 	// email: tempEmail,
-							// 	// avatar: avatar ?? ''
-							// 	name: ctx.body.address,
-							// 	email: '',
-							// 	address: ctx.body.address,
-							// 	avatar: '',
-							// 	mid: 'fake-mid'
-							// });
-						}
+              // user = await ctx.context.internalAdapter.createUser({
+              // 	// name: ens ?? ctx.body.address,
+              // 	// email: tempEmail,
+              // 	// avatar: avatar ?? ''
+              // 	name: ctx.body.address,
+              // 	email: '',
+              // 	address: ctx.body.address,
+              // 	avatar: '',
+              // 	mid: 'fake-mid'
+              // });
+            } else {
+              user = await ctx.context.internalAdapter.updateUser(
+                user?.id,
+                {
+                  address: ctx.body.address,
+                },
+                ctx
+              );
+            }
 
-						const session = await ctx.context.internalAdapter.createSession(user?.id, ctx.request);
+            const session = await ctx.context.internalAdapter.createSession(
+              user?.id,
+              ctx.request
+            );
 
-						if (!session) {
-							return ctx.json(null, {
-								status: 500,
-								body: {
-									message: 'Internal Server Error',
-									status: 500
-								}
-							});
-						}
+            if (!session) {
+              return ctx.json(null, {
+                status: 500,
+                body: {
+                  message: "Internal Server Error",
+                  status: 500,
+                },
+              });
+            }
 
-						await setSessionCookie(ctx, { session, user });
+            await setSessionCookie(ctx, { session, user });
 
-						return ctx.json({ token: session.token });
-					} catch (error: any) {
-						if (error instanceof APIError) throw error;
-						throw new APIError('UNAUTHORIZED', {
-							message: 'Something went wrong. Please try again later.',
-							error: error.message
-						});
-					}
-				}
-			)
-		}
-	}) satisfies BetterAuthPlugin;
+            return ctx.json({ token: session.token });
+          } catch (error: any) {
+            if (error instanceof APIError) throw error;
+            throw new APIError("UNAUTHORIZED", {
+              message: "Something went wrong. Please try again later.",
+              error: error.message,
+            });
+          }
+        }
+      ),
+    },
+  }) satisfies BetterAuthPlugin;
