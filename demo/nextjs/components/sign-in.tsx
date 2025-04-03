@@ -324,6 +324,8 @@ export default function Login() {
       callbackURL: "/sign-in-success",
     });
 
+    await pga.addMid({ encryptedMid: "fake-mid-2" });
+
     // await pga.addMid({ encryptedMid: "fake-mid-1" });
     // setShowSuccess(true);
   };
