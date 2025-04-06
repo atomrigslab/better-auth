@@ -309,20 +309,28 @@ export default function Login() {
       otp: verificationCode,
     });
     console.log("emailSignIn result", { data, error });
+    client.getSession().then((session) => {
+      console.log("sign-in session", session);
+      if (session.error) return;
+      window.pga.helpers.setAuthToken(session.data);
+      pga.addMid({ encryptedMid: "fake-mid-1" });
+    });
+
     if (error === null) {
       setShowSuccess(true);
     }
-    await pga.addMid({ encryptedMid: "fake-mid-1" });
   };
 
   const socialSignIn = async () => {
     // const isLinked =
     //   pgaUser?.user &&
     //   !pgaUser?.accounts?.find((a) => a.providerId === "google");
-    await signIn.social({
+    const signInResult = await signIn.social({
       provider: "google",
       callbackURL: "/sign-in-success",
     });
+
+    // window.pga.helpers.setAuthToken(JSON.parse(storedToken));
 
     await pga.addMid({ encryptedMid: "fake-mid-2" });
 
@@ -372,6 +380,7 @@ export default function Login() {
         message: messageToSign,
         signature,
         address,
+        walletName: "ronin",
       });
       console.log("result", result);
 
@@ -379,8 +388,16 @@ export default function Login() {
       // setShowConflict(true);
       // setShowAccountConnect(true);
 
-      await pga.addMid({ encryptedMid: "fake-mid-1" });
-      console.log("add mid success");
+      client.getSession().then((session) => {
+        console.log("sign-in session", session);
+        if (session.error) return;
+        window.pga.helpers.setAuthToken(session.data);
+        pga.addMid({ encryptedMid: "fake-mid-1" });
+      });
+
+      // window.pga.helpers.setAuthToken(session.data);
+      // await pga.addMid({ encryptedMid: "fake-mid-1" });
+      // console.log("add mid success");
 
       // const midList = await pga.getMidList()
       // console.log("mid list", midList)
@@ -439,8 +456,17 @@ export default function Login() {
         message: messageToSign,
         signature,
         address,
+        walletName: "metamask",
       });
       console.log("result", result);
+
+      client.getSession().then((session) => {
+        console.log("sign-in session", session);
+        if (session.error) return;
+        window.pga.helpers.setAuthToken(session.data);
+        pga.addMid({ encryptedMid: "fake-mid-1" });
+      });
+
       setShowSuccess(true);
     } catch (error) {
       console.error(error);

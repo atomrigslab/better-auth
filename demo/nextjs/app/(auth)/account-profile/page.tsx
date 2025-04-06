@@ -30,7 +30,7 @@ export default function Page() {
   const fetchPgaUser = async () => {
     const s = await client.getSession();
     console.log("getSession result", s);
-    setSession(s)
+    setSession(s);
     const result = await pga.getUserByMid({
       query: { encryptedMid: "fake-mid-1" },
     });
@@ -68,7 +68,7 @@ export default function Page() {
   };
 
   const routeToConnectEmail = async () => {
-    router.push("/email-link")
+    router.push("/email-link");
   };
 
   const connectGoogle = async () => {
@@ -78,11 +78,17 @@ export default function Page() {
     });
   };
 
-  const connectWallet = async (p) => {
+  const connectWallet = async (walletName: "ronin" | "metamask") => {
     try {
-      if (!p) {
-        alert("no provider found");
+      if (!walletName) {
+        alert("no walletName found");
         return;
+      }
+      let p;
+      if (walletName === "ronin") {
+        p = window?.ronin?.provider;
+      } else if (walletName === "metamask") {
+        p = window?.ethereum;
       }
 
       const provider = new BrowserProvider(p);
@@ -120,6 +126,7 @@ export default function Page() {
         message: messageToSign,
         signature,
         address,
+        walletName
       });
       console.log("result", result);
 
@@ -195,14 +202,22 @@ export default function Page() {
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-gray-400 text-sm">Your E-mail</p>
-                {linked.email ? <p className="text-gray-300">{pgaUser?.user?.email}</p> : <p className="text-gray-300">-</p>}
+                {linked.email ? (
+                  <p className="text-gray-300">{pgaUser?.user?.email}</p>
+                ) : (
+                  <p className="text-gray-300">-</p>
+                )}
               </div>
-              {!linked.email ? <button
-                className="bg-transparent text-green-400 px-2 py-1 rounded text-sm"
-                onClick={routeToConnectEmail}
-              >
-                Connect +
-              </button> : <span>Linked</span>}
+              {!linked.email ? (
+                <button
+                  className="bg-transparent text-green-400 px-2 py-1 rounded text-sm"
+                  onClick={routeToConnectEmail}
+                >
+                  Connect +
+                </button>
+              ) : (
+                <span>Linked</span>
+              )}
             </div>
           </div>
         </div>
@@ -288,7 +303,7 @@ export default function Page() {
               {!linked.wallet.ronin ? (
                 <button
                   className="bg-transparent text-green-400 px-2 py-1 rounded text-sm"
-                  onClick={() => connectWallet(window?.ronin?.provider)}
+                  onClick={() => connectWallet("ronin")}
                 >
                   Connect +
                 </button>
@@ -347,7 +362,7 @@ export default function Page() {
               </div>
               <button
                 className="bg-transparent text-green-400 px-2 py-1 rounded text-sm"
-                onClick={() => connectWallet(window?.ethereum)}
+                onClick={() => connectWallet("metamask")}
               >
                 Connect +
               </button>

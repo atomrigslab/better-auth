@@ -1,12 +1,17 @@
 "use client";
 
-import { pga } from "@/lib/auth-client";
+import { client, pga } from "@/lib/auth-client";
 import { useEffect } from "react";
 
 export default function Page() {
   useEffect(() => {
-    pga.addMid({ encryptedMid: "fake-mid-1" });
-  }, [])
+    client.getSession().then((session) => {
+      console.log("sign-in-success session", session);
+      if (session.error) return;
+      window.pga.helpers.setAuthToken(session.data);
+      pga.addMid({ encryptedMid: "fake-mid-1" });
+    });
+  }, []);
 
   return (
     <div className="w-full">

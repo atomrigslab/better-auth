@@ -4,7 +4,11 @@ import {
   //   type User,
   // setSessionCookie
 } from "better-auth";
-import { APIError, createAuthEndpoint, getSessionFromCtx } from "better-auth/api";
+import {
+  APIError,
+  createAuthEndpoint,
+  getSessionFromCtx,
+} from "better-auth/api";
 
 // Database Instance
 // import { db } from '@repo/db/drizzle';
@@ -41,13 +45,35 @@ export const siwe = (options: SIWEPluginOptions) =>
   ({
     id: "siwe",
     schema: {
-      user: {
+      // user: {
+      //   fields: {
+      //     address: {
+      //       type: "string",
+      //       required: false,
+      //       defaultValue: "",
+      //       // unique: true
+      //     },
+      //   },
+      // },
+      wallet: {
         fields: {
+          userId: {
+            type: "string",
+            required: true,
+          },
+          name: {
+            type: "string",
+            required: true,
+          },
           address: {
             type: "string",
-            required: false,
-            defaultValue: "",
-            // unique: true
+            required: true,
+          },
+          createdAt: {
+            type: "date",
+          },
+          updatedAt: {
+            type: "date",
           },
         },
       },
@@ -84,10 +110,11 @@ export const siwe = (options: SIWEPluginOptions) =>
             message: z.string(),
             signature: z.string(),
             address: z.string(),
+            walletName: z.string(),
           }),
         },
         async (ctx) => {
-          const { message, signature } = ctx.body;
+          const { message, signature, walletName } = ctx.body;
           // Parse and validate SIWE message
           const siweMessage = new SiweMessage(message);
 
@@ -123,14 +150,20 @@ export const siwe = (options: SIWEPluginOptions) =>
             // );
 
             // const mid = 'fake-mid';
-            let user = db
-              .prepare("SELECT * FROM user WHERE address = ?")
+            // let user = db
+            //   .prepare("SELECT * FROM user WHERE address = ?")
+            //   .get(ctx.body.address);
+            let wallet = db
+              .prepare("SELECT * FROM wallet WHERE address = ?")
               .get(ctx.body.address);
-            console.log("existing user", { value: user, type: typeof user });
+            console.log("existing wallet", {
+              value: wallet,
+              type: typeof wallet,
+            });
 
-            // let user = undefined;
+            let user = undefined;
 
-            if (!user) {
+            if (!wallet) {
               const tempEmail = `${ctx.body.address}@${process.env.BETTER_AUTH_URL}`;
               // const ens = await getEnsName(wagmiConfig, {
               // 	address: ctx.body.address as `0x${string}`,
@@ -153,6 +186,24 @@ export const siwe = (options: SIWEPluginOptions) =>
                 // mid: 'fake-mid'
               });
 
+              const id = generateId();
+              const insertStatement = db
+                .prepare(
+                  "INSERT INTO wallet (id, userId, name, address, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
+                )
+                .run(
+                  id,
+                  user.id,
+                  walletName,
+                  ctx.body.address,
+                  new Date().toISOString(),
+                  new Date().toISOString()
+                );
+
+              // let user = db
+              //   .prepare("SELECT * FROM wallet WHERE address = ?")
+              //   .get(ctx.body.address);
+
               // user = await ctx.context.internalAdapter.createUser({
               // 	// name: ens ?? ctx.body.address,
               // 	// email: tempEmail,
@@ -164,13 +215,18 @@ export const siwe = (options: SIWEPluginOptions) =>
               // 	mid: 'fake-mid'
               // });
             } else {
-              user = await ctx.context.internalAdapter.updateUser(
-                user?.id,
-                {
-                  address: ctx.body.address,
-                },
-                ctx
-              );
+              console.log("wallet exist", { address: ctx.body.address });
+              // user = await ctx.context.internalAdapter.updateUser(
+              //   user?.id,
+              //   {
+              //     address: ctx.body.address,
+              //   },
+              //   ctx
+              // );
+              // find user from address
+              user = db
+                .prepare("SELECT * FROM user WHERE id = ?")
+                .get(wallet.userId);
             }
 
             const session = await ctx.context.internalAdapter.createSession(
@@ -209,6 +265,7 @@ export const siwe = (options: SIWEPluginOptions) =>
             message: z.string(),
             signature: z.string(),
             address: z.string(),
+            walletName: z.string(),
           }),
         },
         async (ctx) => {
@@ -234,7 +291,7 @@ export const siwe = (options: SIWEPluginOptions) =>
               nonce: verification.value,
               // domain: options.domain,
             });
-            console.log("verified", verified)
+            console.log("verified", verified);
 
             if (!verified.success) {
               throw new APIError("UNAUTHORIZED", {
@@ -243,23 +300,45 @@ export const siwe = (options: SIWEPluginOptions) =>
             }
 
             const existingSession = await getSessionFromCtx(ctx);
-            console.log("existingSession", existingSession)
+            console.log("existingSession", existingSession);
             if (!existingSession) {
               throw new APIError("BAD_REQUEST", {
                 message: ERROR_CODES.UNAUTHORIZED_SESSION,
               });
             }
 
-            const user = await ctx.context.internalAdapter.updateUser(
-              existingSession.user?.id,
-              {
-                address: ctx.body.address,
-              },
-              ctx
-            );
+            //   let wallet = db
+            //   .prepare("SELECT * FROM wallet WHERE address = ?")
+            //   .get(ctx.body.address);
+            // console.log("existing wallet", { value: wallet, type: typeof wallet });
+            // let user = undefined;
+
+            // const user = await ctx.context.internalAdapter.updateUser(
+            //   existingSession.user?.id,
+            //   {
+            //     address: ctx.body.address,
+            //   },
+            //   ctx
+            // );
+
+            const userId = existingSession.user.id;
+
+            const id = generateId();
+            const insertStatement = db
+              .prepare(
+                "INSERT INTO wallet (id, userId, name, address, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
+              )
+              .run(
+                id,
+                userId,
+                ctx.body.walletName,
+                ctx.body.address,
+                new Date().toISOString(),
+                new Date().toISOString()
+              );
 
             const session = await ctx.context.internalAdapter.createSession(
-              user?.id,
+              userId,
               ctx.request
             );
 
@@ -277,7 +356,7 @@ export const siwe = (options: SIWEPluginOptions) =>
 
             return ctx.json({ token: session.token });
           } catch (error: any) {
-            console.log("error", error)
+            console.log("error", error);
             if (error instanceof APIError) throw error;
             throw new APIError("UNAUTHORIZED", {
               message: "Something went wrong. Please try again later.",

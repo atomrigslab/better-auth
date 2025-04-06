@@ -1,1 +1,0 @@
-create table "pga" ("id" text not null primary key, "userId" text not null, "mid" text not null, "createdAt" date not null, "updatedAt" date not null);

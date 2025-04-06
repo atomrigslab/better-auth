@@ -11,6 +11,8 @@ import {
   oidcProvider,
   customSession,
   createAuthMiddleware,
+  genericOAuth,
+  jwt,
 } from "better-auth/plugins";
 import { reactInvitationEmail } from "./email/invitation";
 import { LibsqlDialect } from "@libsql/kysely-libsql";
@@ -64,6 +66,12 @@ export const auth = betterAuth({
   // 	dialect,
   // 	type: process.env.USE_MYSQL ? "mysql" : "sqlite",
   // },
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60, // Cache duration in seconds
+    },
+  },
   user: {
     // additionalFields: {
     //   mid: {
@@ -91,9 +99,11 @@ export const auth = betterAuth({
   account: {
     accountLinking: {
       // trustedProviders: ["google", "github", "demo-app"],
+      // trustedProviders: ["google", 'V5xRiO3j9E5gch2sqssYFPuFvt83fgRF'],
       trustedProviders: ["google"],
     },
   },
+  trustedOrigins: ["chrome-extension://dgoifpeldfmnlbangejfelgmgibpokej"],
   // emailAndPassword: {
   // 	enabled: true,
   // 	async sendResetPassword({ user, url }) {
@@ -145,6 +155,28 @@ export const auth = betterAuth({
       disableSignUp: true,
     }),
     pga(),
+    bearer(),
+    openAPI(),
+    jwt(),
+    // oidcProvider({
+    //   loginPage: "/sign-in",
+    // }),
+    // genericOAuth({
+    //   config: [
+    //     {
+    //       providerId: "V5xRiO3j9E5gch2sqssYFPuFvt83fgRF",
+    //       clientId: "cVnqhSkBcoYyszpjTGxCiiMOlURaZQUO",
+    //       clientSecret: "PHlhqvLoijRgYFcBaSFtKvdvOwlvVyaf",
+    //       discoveryUrl:
+    //         "http://localhost:3000/api/auth/.well-known/openid-configuration",
+    //       authorizationUrl: "http://localhost:3000/api/auth/oauth2/authorize",
+    //       tokenUrl: "http://localhost:3000/api/auth/oauth2/token",
+    //       scopes: ['email'],
+    //       prompt: 'none',
+    //     },
+    //     // Add more providers as needed
+    //   ],
+    // }),
     // linkOAuth(),
     // organization({
     // 	async sendInvitationEmail(data) {
@@ -199,15 +231,12 @@ export const auth = betterAuth({
       //   const isUserNotFound =
       //     ctx.context.returned?.body?.code === "USER_NOT_FOUND";
       //   console.log("isUserNotFound", isUserNotFound);
-
       //   const existingSession = await getSessionFromCtx(ctx);
       //   if (!existingSession) {
       //     return;
       //   }
       //   console.log("getSessionFromCtx", existingSession?.session);
-
       //   if (!isUserNotFound) return;
-
       //   if (ctx.query.link) {
       //     const updatedUser = await ctx.context.internalAdapter.updateUser(
       //       existingSession.user.id,
@@ -217,7 +246,6 @@ export const auth = betterAuth({
       //       },
       //       ctx
       //     );
-
       //     const session = await ctx.context.internalAdapter.createSession(
       //       existingSession.user.id,
       //       ctx.request
@@ -241,16 +269,13 @@ export const auth = betterAuth({
       //   } else {
       //     //
       //   }
-
       //   // update email and emailVerified as this error only happens when linking email auth to existing walle user
       //   //
-
       //   // const newSession = ctx.context.newSession;
       //   // if (newSession) {
       //   //   console.log("/sign-in/email-otp after hook newSession", newSession);
       //   // }
       // }
-
       // if (ctx.path.startsWith("/callback")) {
       //   const {
       //     codeVerifier,
@@ -260,7 +285,6 @@ export const auth = betterAuth({
       //     newUserURL,
       //     requestSignUp,
       //   } = await parseState(ctx);
-
       //   if (link) {
       //     const existingSession = await getSessionFromCtx(ctx);
       //     if (!existingSession) {
@@ -274,17 +298,14 @@ export const auth = betterAuth({
       //       },
       //       ctx
       //     );
-
       //     // const existingAccount = await ctx.context.internalAdapter.findAccount(
       //     //   userInfo.id,
       //     // );
-
       //     // if (existingAccount) {
       //     //   if (existingAccount.userId.toString() !== link.userId.toString()) {
       //     //     return redirectOnError("account_already_linked_to_different_user");
       //     //   }
       //     // }
-
       //     // const newAccount = await c.context.internalAdapter.createAccount(
       //     //   {
       //     //     userId: link.userId,
@@ -295,11 +316,9 @@ export const auth = betterAuth({
       //     //   },
       //     //   c,
       //     // );
-
       //     // if (!newAccount) {
       //     //   return redirectOnError("unable_to_link_account");
       //     // }
-
       //     // let toRedirectTo: string;
       //     // try {
       //     //   const url = callbackURL;
