@@ -286,6 +286,7 @@ export default function Login() {
   const [showConflict, setShowConflict] = useState(false);
   const [pgaUser, setPgaUser] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState("")
 
   const router = useRouter();
 
@@ -312,6 +313,16 @@ export default function Login() {
       email,
       otp: verificationCode,
     });
+    if (error) {
+      console.log("email signin error")
+      // if (error.code === 'invalid_code') {
+      //   // setVerificationError('Invalid verification code. Please check and try again.');
+      // } else {
+      //   setLoginError(`Sign in failed: ${.error.message}`);
+      // }
+      setLoginError(`Sign in failed: ${error.message}`);
+      return;
+    }
     console.log("emailSignIn result", { data, error });
     client.getSession().then((session) => {
       console.log("sign-in session", session);
@@ -560,6 +571,7 @@ export default function Login() {
               socialSignIn={socialSignIn}
               roninSignIn={roninSignIn}
               metamaskSignIn={metamaskSignIn}
+              loginError={loginError}
             />
           )}
           {/* {showSuccess && !showConflict && <AccountConnectedSuccess />}
@@ -588,6 +600,11 @@ function LoginForm(props: any) {
   const [verificationCode, setVerificationCode] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [autoLogin, setAutoLogin] = useState(false);
+
+  const [emailError, setEmailError] = useState("");
+  const [verificationError, setVerificationError] = useState("");
+  const [isVerifyButtonDisabled, setIsVerifyButtonDisabled] = useState(false);
+  const [isVerificationSent, setIsVerificationSent] = useState(false);
 
   return (
     <>
@@ -620,26 +637,58 @@ function LoginForm(props: any) {
         <div className="w-full space-y-4">
           {/* Email Field */}
           <div className="relative">
-            <input
+            {/* <input
               type="email"
               className="w-full rounded bg-gray-800 px-4 py-3 text-gray-200 placeholder-gray-500 outline-none focus:ring-1 focus:ring-green-500"
               placeholder="Please enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+            /> */}
+            <input
+              type="email"
+              className={`w-full rounded bg-gray-800 px-4 py-3 text-gray-200 placeholder-gray-500 outline-none focus:ring-1 focus:ring-green-500 ${
+                emailError ? "border border-red-500" : ""
+              }`}
+              placeholder="Please enter your email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setEmailError(""); // Clear error on change
+              }}
+              // disabled={isVerifyButtonDisabled && countdown > 0}
             />
             <button
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-gray-700 px-2 py-1 text-xs text-white hover:bg-gray-600"
+              // className="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-gray-700 px-2 py-1 text-xs text-white hover:bg-gray-600"
+              className={`absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs text-white ${
+                isVerifyButtonDisabled
+                  ? "bg-gray-500 opacity-50 cursor-not-allowed"
+                  : "bg-gray-700 hover:bg-gray-600"
+              }`}
+              disabled={isVerifyButtonDisabled}
               onClick={async () => {
                 const { data, error } = await emailOtp.sendVerificationOtp({
                   email,
                   type: "sign-in", // or "email-verification", "forget-password"
                 });
+                if (error) {
+                  return setEmailError(error?.message);
+                }
+                setIsVerificationSent(true);
+                setIsVerifyButtonDisabled(true);
                 console.log("sendVerificationOtp result", { data, error });
               }}
             >
               Verify Email
             </button>
           </div>
+          {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
+          {isVerificationSent && !emailError && (
+            // <div className="p-3 bg-green-500 bg-opacity-20 border border-green-500 rounded">
+            <p className="text-green-500 text-sm">
+              Verification code sent! Please check your email.
+            </p>
+            // </div>
+          )}
 
           {/* Verification Code Field */}
           <input
@@ -650,13 +699,27 @@ function LoginForm(props: any) {
             onChange={(e) => setVerificationCode(e.target.value)}
           />
 
-            {/* Sign In Button */}
-          <button
+          {/* Sign In Button */}
+          {/* <button
             className="w-full rounded bg-green-500 py-3 font-medium text-white hover:bg-green-600"
             onClick={() => props.emailSignIn({ email, verificationCode })}
           >
             Sign in
+          </button> */}
+
+          <button
+            className="w-full rounded bg-green-500 py-3 font-medium text-white hover:bg-green-600 disabled:bg-green-800 disabled:cursor-not-allowed"
+            onClick={() => props.emailSignIn({ email, verificationCode })}
+            disabled={!isVerificationSent || !verificationCode.trim()}
+          >
+            Sign in
           </button>
+
+          {props.loginError && (
+            <div className="p-3 bg-red-500 bg-opacity-20 border border-red-500 rounded">
+              <p className="text-red-500 text-sm">{props.loginError}</p>
+            </div>
+          )}
 
           {/* Divider */}
           <div className="flex items-center py-2">
