@@ -352,7 +352,7 @@ export const siwe = (options: SIWEPluginOptions) =>
               });
             }
 
-            await setSessionCookie(ctx, { session, user });
+            await setSessionCookie(ctx, { session, user: existingSession.user });
 
             return ctx.json({ token: session.token });
           } catch (error: any) {

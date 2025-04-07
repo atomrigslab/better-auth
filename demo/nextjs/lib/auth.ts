@@ -158,6 +158,20 @@ export const auth = betterAuth({
     bearer(),
     openAPI(),
     jwt(),
+    customSession(async ({ user, session }) => {
+      const mids = db.prepare("SELECT * FROM pga WHERE userId = ?").all(user.id).map(m => m.mid);
+      const wallets = db.prepare("SELECT * FROM wallet WHERE userId = ?").all(user.id)
+      // const roles = findUserRoles(session.session.userId);
+      return {
+          // roles,
+          user: {
+              ...user,
+          },
+          session,
+          mid: mids,
+          wallet: wallets
+      };
+  }),
     // oidcProvider({
     //   loginPage: "/sign-in",
     // }),

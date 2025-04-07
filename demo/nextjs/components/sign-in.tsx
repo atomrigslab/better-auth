@@ -274,6 +274,7 @@ import {
 import { useEffect, useState } from "react";
 import { BrowserProvider, ethers } from "ethers";
 import { SiweMessage } from "siwe";
+import { useRouter } from "next/navigation";
 
 export default function Login() {
   // const [email, setEmail] = useState("");
@@ -284,6 +285,9 @@ export default function Login() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showConflict, setShowConflict] = useState(false);
   const [pgaUser, setPgaUser] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  const router = useRouter();
 
   useEffect(() => {
     fetchPgaUser();
@@ -319,6 +323,8 @@ export default function Login() {
     if (error === null) {
       setShowSuccess(true);
     }
+
+    router.push("/sign-in-success");
   };
 
   const socialSignIn = async () => {
@@ -339,6 +345,7 @@ export default function Login() {
   };
 
   const roninSignIn = async () => {
+    setIsLoading(true);
     try {
       if (!window?.ronin?.provider) {
         alert("no ronin provider found");
@@ -405,12 +412,17 @@ export default function Login() {
       // const sessions = await client.listSessions();
       // console.log("accounts", accounts);
       // console.log("sessions", sessions);
+
+      router.push("/sign-in-success");
     } catch (error) {
       console.error(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const metamaskSignIn = async () => {
+    setIsLoading(true);
     try {
       if (!window?.ethereum) {
         alert("no ethereum provider found");
@@ -467,9 +479,13 @@ export default function Login() {
         pga.addMid({ encryptedMid: "fake-mid-1" });
       });
 
+      router.push("/sign-in-success");
+
       setShowSuccess(true);
     } catch (error) {
       console.error(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -489,52 +505,81 @@ export default function Login() {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-black">
-      {/* Left section with gradient background */}
-      <div className="relative hidden w-1/2 lg:block">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-600 to-green-400 opacity-90">
-          {/* Blob shapes overlay */}
-          <div className="absolute bottom-0 left-0 h-4/5 w-4/5 rounded-full bg-blue-500/30 blur-3xl"></div>
-          <div className="absolute right-0 top-1/3 h-4/5 w-4/5 rounded-full bg-green-500/30 blur-3xl"></div>
+    <>
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <div className="flex flex-col items-center rounded-lg bg-gray-900 p-6 shadow-lg">
+            <svg
+              className="animate-spin h-12 w-12 text-green-500 mb-4"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            <p className="text-lg font-medium text-white">Connecting...</p>
+          </div>
+        </div>
+      )}
+      <div className="flex h-screen w-screen bg-black">
+        {/* Left section with gradient background */}
+        <div className="relative hidden w-1/2 lg:block">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-600 to-green-400 opacity-90">
+            {/* Blob shapes overlay */}
+            <div className="absolute bottom-0 left-0 h-4/5 w-4/5 rounded-full bg-blue-500/30 blur-3xl"></div>
+            <div className="absolute right-0 top-1/3 h-4/5 w-4/5 rounded-full bg-green-500/30 blur-3xl"></div>
+          </div>
+
+          <div className="relative z-10 flex h-full flex-col justify-center p-16 text-white">
+            <h1 className="text-6xl font-bold leading-tight">
+              Welcome
+              <br />
+              Back to GuilPal.
+            </h1>
+            <p className="mt-6 text-xl">A new quest begins now. Are you in?</p>
+          </div>
         </div>
 
-        <div className="relative z-10 flex h-full flex-col justify-center p-16 text-white">
-          <h1 className="text-6xl font-bold leading-tight">
-            Welcome
-            <br />
-            Back to GuilPal.
-          </h1>
-          <p className="mt-6 text-xl">A new quest begins now. Are you in?</p>
-        </div>
-      </div>
-
-      <div className="flex w-full flex-col items-center justify-between bg-black lg:w-1/2">
-        {!showSuccess && !showConflict && (
-          <LoginForm
-            emailSignIn={(args) => emailSignIn(args)}
-            // emailSignIn={(args) => emailSignInLink(args)}
-            socialSignIn={socialSignIn}
-            roninSignIn={roninSignIn}
-            metamaskSignIn={metamaskSignIn}
-          />
-        )}
-        {/* {showSuccess && !showConflict && <AccountConnectedSuccess />}
+        <div className="flex w-full flex-col items-center justify-between bg-black lg:w-1/2">
+          {!showSuccess && !showConflict && (
+            <LoginForm
+              emailSignIn={(args) => emailSignIn(args)}
+              // emailSignIn={(args) => emailSignInLink(args)}
+              socialSignIn={socialSignIn}
+              roninSignIn={roninSignIn}
+              metamaskSignIn={metamaskSignIn}
+            />
+          )}
+          {/* {showSuccess && !showConflict && <AccountConnectedSuccess />}
         {!showSuccess && showConflict && <AccountLinkingRequired />} */}
-        {/* {showAccountConnect && (
+          {/* {showAccountConnect && (
           <AccountConnect
             connectGoogleFromWalletUser={connectGoogleFromWalletUser}
           />
         )} */}
-        {/* <AuthForm /> */}
+          {/* <AuthForm /> */}
+          {/* <AccountConnectedSuccess /> */}
+          {/* <AuthSuccessScreen /> */}
+          {/* <AccountLinkingRequired /> */}
+          {/* <AccountConflictScreen /> */}
+        </div>
+        {/* Right section with login form */}
+        {/* <LoginForm /> */}
         {/* <AccountConnectedSuccess /> */}
-        {/* <AuthSuccessScreen /> */}
-        {/* <AccountLinkingRequired /> */}
-        {/* <AccountConflictScreen /> */}
       </div>
-      {/* Right section with login form */}
-      {/* <LoginForm /> */}
-      {/* <AccountConnectedSuccess /> */}
-    </div>
+    </>
   );
 }
 
@@ -605,30 +650,7 @@ function LoginForm(props: any) {
             onChange={(e) => setVerificationCode(e.target.value)}
           />
 
-          {/* Checkboxes */}
-          {/* <div className="flex items-center justify-between px-1 text-sm">
-            <label className="flex items-center text-gray-400">
-              <input
-                type="checkbox"
-                className="mr-2 h-4 w-4 rounded border-gray-600 bg-gray-700 text-green-500 focus:ring-0 focus:ring-offset-0"
-                checked={rememberMe}
-                onChange={() => setRememberMe(!rememberMe)}
-              />
-              Remember Me
-            </label>
-
-            <label className="flex items-center text-gray-400">
-              <input
-                type="checkbox"
-                className="mr-2 h-4 w-4 rounded border-gray-600 bg-gray-700 text-green-500 focus:ring-0 focus:ring-offset-0"
-                checked={autoLogin}
-                onChange={() => setAutoLogin(!autoLogin)}
-              />
-              Auto Login
-            </label>
-          </div> */}
-
-          {/* Sign In Button */}
+            {/* Sign In Button */}
           <button
             className="w-full rounded bg-green-500 py-3 font-medium text-white hover:bg-green-600"
             onClick={() => props.emailSignIn({ email, verificationCode })}

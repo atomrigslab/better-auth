@@ -8,6 +8,7 @@ import {
 	oneTapClient,
 	oidcClient,
 	genericOAuthClient,
+	customSessionClient,
 } from "better-auth/client/plugins";
 import { toast } from "sonner";
 import { stripeClient } from "@better-auth/stripe/client";
@@ -16,6 +17,7 @@ import { siweClientPlugin } from "./plugins/wallet/client";
 import { emailOTPClient } from "./plugins/email-otp/client";
 import { oauthLinkClient } from "./plugins/oauth/client";
 import { pgaClientPlugin } from "./plugins/pga/client";
+import { auth } from "./auth";
 
 export const client = createAuthClient({
 	plugins: [
@@ -42,6 +44,7 @@ export const client = createAuthClient({
 		emailOTPClient(),
 		siweClientPlugin(),
 		pgaClientPlugin(),
+		customSessionClient<typeof auth>(),
 		// oauthLinkClient(),
 	],
 	fetchOptions: {
