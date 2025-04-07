@@ -8,6 +8,10 @@ export async function middleware(request: NextRequest) {
     if (request.nextUrl.pathname.startsWith('/account-profile') && !cookies) {
         return NextResponse.redirect(new URL("/sign-in", request.url));
     }
+
+    if (request.nextUrl.pathname.startsWith('/sign-in-success') && !cookies) {
+        return NextResponse.redirect(new URL("/sign-in", request.url));
+    }
     
     // 로그인된 상태에서 로그인 페이지 접근 시 대시보드로 리다이렉트
     if (request.nextUrl.pathname === '/sign-in' && cookies) {
@@ -18,5 +22,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/account-profile/:path*", "/sign-in"],
+    matcher: ["/account-profile/:path*", "/sign-in-success/:path*", "/sign-in"],
 };
