@@ -1,49 +1,57 @@
-<p align="center">
-  <picture>
-    <source srcset="./banner-dark.png" media="(prefers-color-scheme: dark)">
-    <source srcset="./banner.png" media="(prefers-color-scheme: light)">
-    <img src="./banner.png" alt="Better Auth Logo">
-  </picture>
-  <h2 align="center">
-    Better Auth
-  </h2>
+# Better-Auth Custom Fork
 
-  <p align="center">
-    The most comprehensive authentication library for TypeScript
-    <br />
-    <a href="https://better-auth.com"><strong>Learn more »</strong></a>
-    <br />
-    <br />
-    <a href="https://discord.com/invite/GYC3W7tZzb">Discord</a>
-    ·
-    <a href="https://better-auth.com">Website</a>
-    ·
-    <a href="https://github.com/better-auth/better-auth/issues">Issues</a>
-  </p>
+This repository contains a customized fork of the better-auth library tailored for specific use cases. It's maintained as a private npm package.
 
-[![npm](https://img.shields.io/npm/dm/better-auth)](https://npm.chart.dev/better-auth?primary=neutral&gray=neutral&theme=dark)
-[![npm version](https://img.shields.io/npm/v/better-auth.svg)](https://www.npmjs.com/package/better-auth)
-[![GitHub stars](https://img.shields.io/github/stars/better-auth/better-auth)](https://github.com/better-auth/better-auth/stargazers)
-</p>
+## Overview
 
-## About the Project
+This repository modifies the original better-auth library to support custom authentication flows and requirements for our applications. The customized package is published as `@atomrigslab/better-auth` and used in guildpal-auth-server and client pages.
 
-Better Auth is framework-agnostic authentication (and authorization) library for TypeScript. It provides a comprehensive set of features out of the box and includes a plugin ecosystem that simplifies adding advanced functionalities with minimal code in short amount of time. Whether you need 2FA, multi-tenant support, or other complex features. It lets you focus on building your actual application instead of reinventing the wheel. 
+## Development
 
-### Why Better Auth
+### Setup
 
-Authentication in the TypeScript ecosystem is a half-solved problem. Other open-source libraries often requires a lot of additional code for anything beyond basic authentication. Rather than just pushing third-party services as the solution, I believe we can do better as a community—hence, Better Auth.
+```bash
+# Install dependencies
+pnpm install
+```
 
-## Contribution
+### Making Changes
 
-Better Auth is free and open source project licensed under the [MIT License](./LICENSE.md). You are free to do whatever you want with it.
+1. Navigate to `packages/better-auth` directory
+2. Implement your custom changes for your specific use case
+3. Test your changes locally
 
-You could help continuing its development by:
+### Building
 
-- [Contribute to the source code](./CONTRIBUTING.md)
-- [Suggest new features and report issues](https://github.com/better-auth/better-auth/issues)
+```bash
+# Build the package
+pnpm build
+```
 
-## Security
-If you discover a security vulnerability within Better Auth, please send an e-mail to security@better-auth.com.
+### Publishing
 
-All reports will be promptly addressed, and you'll be credited accordingly.
+1. Configure npm publishing with a `.npmrc` file
+2. Deploy to npm:
+```bash
+npm publish
+```
+
+## Usage
+
+After publishing, you can use the updated package in your projects:
+
+```bash
+# In guildpal-auth-server or client projects
+npm install @atomrigslab/better-auth
+```
+
+## Important Notes
+
+- This is a custom fork - changes may not be compatible with the original library
+- Maintain this repository to keep track of your customizations
+- When updating the original library, carefully merge changes to avoid conflicts
+
+## Related Projects
+
+- guildpal-auth-server
+- Client pages that depend on this authentication library
