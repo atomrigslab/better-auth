@@ -112,7 +112,8 @@ export const google = (options: GoogleOptions) => {
 						tokenEndpoint: "https://www.googleapis.com/oauth2/v4/token",
 					});
 				},
-		async verifyIdToken(token, nonce) {
+		async verifyIdToken(token, nonce, clientId) {
+			console.log("google verifyIdToken", {token, nonce, clientId})
 			if (options.disableIdTokenSignIn) {
 				return false;
 			}
@@ -132,8 +133,9 @@ export const google = (options: GoogleOptions) => {
 			if (!tokenInfo) {
 				return false;
 			}
+			console.log("verifyIdToken isValid", {tokenInfo, clientId, options})
 			const isValid =
-				tokenInfo.aud === options.clientId &&
+				(tokenInfo.aud === (clientId || options.clientId)) &&
 				(tokenInfo.iss === "https://accounts.google.com" ||
 					tokenInfo.iss === "accounts.google.com");
 			return isValid;

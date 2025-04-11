@@ -51,7 +51,8 @@ export default function Login() {
   const socialSignIn = async () => {
     const signInResult = await signIn.social({
       provider: "google",
-      callbackURL: "/sign-in-success?login_method=google",
+      // callbackURL: "/sign-in-success?login_method=google",
+      callbackURL: "http://localhost:3000/sign-in-success?login_method=google",
     });
 
     // window.pga.helpers.setAuthToken(JSON.parse(storedToken));

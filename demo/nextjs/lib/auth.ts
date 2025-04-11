@@ -1,25 +1,18 @@
 import { betterAuth } from "better-auth";
-import {
-  bearer,
-  openAPI,
-  customSession,
-  jwt,
-} from "better-auth/plugins";
-import Database from "better-sqlite3";
+import { bearer, openAPI, customSession, jwt } from "better-auth/plugins";
 import { Resend } from "resend";
 import { emailOTP, siwe } from "@/lib/plugins";
 import { pga } from "./plugins/pga";
+import pkg from "pg";
+import { mobile } from "./plugins/mobile";
 
-
-const db = new Database("./sqlite.db");
-
+const { Pool } = pkg;
+export const db = new Pool({
+  connectionString: "postgres://user:password@localhost:5432/database",
+});
 
 export const auth = betterAuth({
   appName: "Better Auth Demo",
-  // database: {
-  // 	dialect,
-  // 	type: process.env.USE_MYSQL ? "mysql" : "sqlite",
-  // },
   session: {
     cookieCache: {
       enabled: true,
@@ -31,13 +24,13 @@ export const auth = betterAuth({
       enabled: true,
     },
   },
-  database: db,
   account: {
     accountLinking: {
       trustedProviders: ["google"],
     },
   },
-  trustedOrigins: ["chrome-extension://dgoifpeldfmnlbangejfelgmgibpokej"],
+  database: db,
+  trustedOrigins: ["chrome-extension://dgoifpeldfmnlbangejfelgmgibpokej", "http://localhost:3000"],
   socialProviders: {
     google: {
       clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
@@ -69,17 +62,21 @@ export const auth = betterAuth({
     bearer(),
     openAPI(),
     jwt(),
+    mobile(),
     customSession(async ({ user, session }) => {
-      const mids = db
-        .prepare("SELECT * FROM pga WHERE userId = ?")
-        .all(user.id)
-        .map((m) => m.mid);
-      const wallets = db
-        .prepare("SELECT * FROM wallet WHERE userId = ?")
-        .all(user.id);
-      const accounts = db
-        .prepare("SELECT * FROM account WHERE userId = ?")
-        .all(user.id);
+      const mids = (
+        await db.query('SELECT * FROM pga WHERE "userId" = $1', [user.id])
+      ).rows;
+      const wallets = (
+        await db.query('SELECT * FROM wallet WHERE "userId" = $1', [
+          user.id,
+        ])
+      ).rows;
+      const accounts = (
+        await db.query('SELECT * FROM account WHERE "userId" = $1', [
+          user.id,
+        ])
+      ).rows;
       return {
         user: {
           ...user,

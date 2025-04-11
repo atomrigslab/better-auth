@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:mobile": "next dev -H 0.0.0.0 -p 3000",
     "dev:secure": "next dev --experimental-https",
     "typecheck": "tsc --noEmit",
     "build": "next build",

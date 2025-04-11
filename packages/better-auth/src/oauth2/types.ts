@@ -50,7 +50,7 @@ export interface OAuthProvider<
 	 * @param nonce - The nonce
 	 * @returns True if the id token is valid, false otherwise
 	 */
-	verifyIdToken?: (token: string, nonce?: string) => Promise<boolean>;
+	verifyIdToken?: (token: string, nonce?: string, clientId?: string) => Promise<boolean>;
 	/**
 	 * Disable implicit sign up for new users. When set to true for the provider,
 	 * sign-in need to be called with with requestSignUp as true to create new users.

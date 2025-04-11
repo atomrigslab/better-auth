@@ -20,6 +20,7 @@ import { pgaClientPlugin } from "./plugins/pga/client";
 import { auth } from "./auth";
 
 export const client = createAuthClient({
+	baseURL: 'http://localhost:5173',
 	plugins: [
 		// organizationClient(),
 		// twoFactorClient({

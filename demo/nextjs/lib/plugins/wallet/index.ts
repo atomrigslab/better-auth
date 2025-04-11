@@ -22,8 +22,9 @@ import { SiweMessage, generateNonce } from "siwe";
 // import { http, createConfig, getEnsName, getEnsAvatar } from '@wagmi/core';
 // import { mainnet, sepolia } from '@wagmi/core/chains';
 import { setSessionCookie } from "better-auth/cookies";
-import { db } from "@/lib/db";
+// import { db } from "@/lib/db";
 import { ERROR_CODES } from "better-auth/plugins";
+import { db } from "@/lib/auth";
 
 export interface SIWEPluginOptions {
   domain: string;
@@ -56,6 +57,7 @@ export const siwe = (options: SIWEPluginOptions) =>
       //   },
       // },
       wallet: {
+        // modelName: "auth_wallet",
         fields: {
           userId: {
             type: "string",
@@ -114,9 +116,11 @@ export const siwe = (options: SIWEPluginOptions) =>
           }),
         },
         async (ctx) => {
+          console.log("body", ctx.body);
           const { message, signature, walletName } = ctx.body;
           // Parse and validate SIWE message
           const siweMessage = new SiweMessage(message);
+          console.log("siweMessage", siweMessage);
 
           try {
             // Find stored nonce to check it's validity
@@ -124,6 +128,7 @@ export const siwe = (options: SIWEPluginOptions) =>
               await ctx.context.internalAdapter.findVerificationValue(
                 `siwe_${ctx.body.address.toLowerCase()}`
               );
+            console.log("verification", verification);
             // Ensure nonce is valid and not expired
             if (!verification || new Date() > verification.expiresAt) {
               throw new APIError("UNAUTHORIZED", {
@@ -136,6 +141,7 @@ export const siwe = (options: SIWEPluginOptions) =>
               nonce: verification.value,
               // domain: options.domain,
             });
+            console.log("verified", verified);
 
             if (!verified.success) {
               throw new APIError("UNAUTHORIZED", {
@@ -153,9 +159,14 @@ export const siwe = (options: SIWEPluginOptions) =>
             // let user = db
             //   .prepare("SELECT * FROM user WHERE address = ?")
             //   .get(ctx.body.address);
-            let wallet = db
-              .prepare("SELECT * FROM wallet WHERE address = ?")
-              .get(ctx.body.address);
+            // let wallet = db
+            //   .prepare("SELECT * FROM wallet WHERE address = ?")
+            //   .get(ctx.body.address);
+            const wallet = (
+              await db.query("SELECT * FROM wallet WHERE address = $1", [
+                ctx.body.address,
+              ])
+            ).rows[0];
             console.log("existing wallet", {
               value: wallet,
               type: typeof wallet,
@@ -187,18 +198,26 @@ export const siwe = (options: SIWEPluginOptions) =>
               });
 
               const id = generateId();
-              const insertStatement = db
-                .prepare(
-                  "INSERT INTO wallet (id, userId, name, address, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
-                )
-                .run(
-                  id,
-                  user.id,
-                  walletName,
-                  ctx.body.address,
-                  new Date().toISOString(),
-                  new Date().toISOString()
-                );
+              const now = new Date().toISOString();
+              // const insertStatement = db
+              //   .prepare(
+              //     "INSERT INTO wallet (id, userId, name, address, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
+              //   )
+              //   .run(
+              //     id,
+              //     user.id,
+              //     walletName,
+              //     ctx.body.address,
+              //     new Date().toISOString(),
+              //     new Date().toISOString()
+              //   );
+              const result = await db.query(
+                'INSERT INTO wallet (id, "userId", name, address, "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+                [id, user.id, walletName, ctx.body.address, now, now]
+              );
+
+              // Return the inserted row
+              // user = result.rows[0];
 
               // let user = db
               //   .prepare("SELECT * FROM wallet WHERE address = ?")
@@ -215,7 +234,10 @@ export const siwe = (options: SIWEPluginOptions) =>
               // 	mid: 'fake-mid'
               // });
             } else {
-              console.log("wallet exist", { address: ctx.body.address });
+              console.log("wallet exist", {
+                address: ctx.body.address,
+                wallet,
+              });
               // user = await ctx.context.internalAdapter.updateUser(
               //   user?.id,
               //   {
@@ -224,10 +246,23 @@ export const siwe = (options: SIWEPluginOptions) =>
               //   ctx
               // );
               // find user from address
-              user = db
-                .prepare("SELECT * FROM user WHERE id = ?")
-                .get(wallet.userId);
+              // user = db
+              //   .prepare("SELECT * FROM user WHERE id = ?")
+              //   .get(wallet.userId);
+
+              // user = (
+              //   await db.query("SELECT * FROM user WHERE id = $1", [
+              //     wallet.userId,
+              //   ])
+              // ).rows[0];
+
+              user = (
+                await db.query('SELECT * FROM "user" WHERE id = $1', [
+                  wallet.userId
+                ])
+              ).rows[0];
             }
+            console.log("verify user", user);
 
             const session = await ctx.context.internalAdapter.createSession(
               user?.id,
@@ -243,11 +278,13 @@ export const siwe = (options: SIWEPluginOptions) =>
                 },
               });
             }
+            console.log("session and user", { session, user });
 
             await setSessionCookie(ctx, { session, user });
 
             return ctx.json({ token: session.token });
           } catch (error: any) {
+            console.log("error message", error.message);
             if (error instanceof APIError) throw error;
             throw new APIError("UNAUTHORIZED", {
               message: "Something went wrong. Please try again later.",
@@ -324,18 +361,23 @@ export const siwe = (options: SIWEPluginOptions) =>
             const userId = existingSession.user.id;
 
             const id = generateId();
-            const insertStatement = db
-              .prepare(
-                "INSERT INTO wallet (id, userId, name, address, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
-              )
-              .run(
-                id,
-                userId,
-                ctx.body.walletName,
-                ctx.body.address,
-                new Date().toISOString(),
-                new Date().toISOString()
-              );
+            const now = new Date().toISOString();
+            const result = await db.query(
+              'INSERT INTO wallet (id, "userId", name, address, "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+              [id, userId, ctx.body.walletName, ctx.body.address, now, now]
+            );
+            // const insertStatement = db
+            //   .prepare(
+            //     "INSERT INTO wallet (id, userId, name, address, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
+            //   )
+            //   .run(
+            //     id,
+            //     userId,
+            //     ctx.body.walletName,
+            //     ctx.body.address,
+            //     new Date().toISOString(),
+            //     new Date().toISOString()
+            //   );
 
             const session = await ctx.context.internalAdapter.createSession(
               userId,
@@ -352,7 +394,10 @@ export const siwe = (options: SIWEPluginOptions) =>
               });
             }
 
-            await setSessionCookie(ctx, { session, user: existingSession.user });
+            await setSessionCookie(ctx, {
+              session,
+              user: existingSession.user,
+            });
 
             return ctx.json({ token: session.token });
           } catch (error: any) {
