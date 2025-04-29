@@ -1,6 +1,6 @@
 {
   "name": "@atomrigslab/better-auth",
-  "version": "1.2.6-beta.5",
+  "version": "1.2.6-beta.9",
   "description": "The most comprehensive authentication library for TypeScript.",
   "type": "module",
   "repository": {
@@ -620,12 +620,12 @@
   },
   "dependencies": {
     "@better-auth/utils": "0.2.4",
-    "@better-fetch/fetch": "catalog:",
+    "@better-fetch/fetch": "1.1.18",
     "@noble/ciphers": "^0.6.0",
     "@noble/hashes": "^1.6.1",
     "@simplewebauthn/browser": "^13.0.0",
     "@simplewebauthn/server": "^13.0.0",
-    "better-call": "catalog:",
+    "better-call": "1.0.8",
     "defu": "^6.1.4",
     "jose": "^5.9.6",
     "kysely": "^0.27.6",
