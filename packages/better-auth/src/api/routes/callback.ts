@@ -199,7 +199,7 @@ export const callbackOAuth = createAuthEndpoint(
 		});
 		const jwt = await getCustomJwtToken(c, user, {
 			jwt: {
-				expirationTime: '1d'
+				expirationTime: '30d'
 			},
 		})
 		let toRedirectTo: string;
