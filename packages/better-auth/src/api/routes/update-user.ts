@@ -449,7 +449,7 @@ export const deleteUser = createAuthEndpoint(
 		deleteSessionCookie(ctx);
 		const afterDelete = ctx.context.options.user.deleteUser?.afterDelete;
 		if (afterDelete) {
-			await afterDelete(session.user, ctx.request);
+			await afterDelete(session.user, ctx.request, ctx.context);
 		}
 		return ctx.json({
 			success: true,

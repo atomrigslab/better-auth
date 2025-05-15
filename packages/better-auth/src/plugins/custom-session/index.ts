@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createAuthEndpoint, getSessionFromCtx } from "../../api";
 import type {
+	AuthContext,
 	BetterAuthOptions,
 	BetterAuthPlugin,
 	InferSession,
@@ -14,7 +15,7 @@ export const customSession = <
 	fn: (session: {
 		user: InferUser<O>;
 		session: InferSession<O>;
-	}) => Promise<Returns>,
+	}, ctx: AuthContext) => Promise<Returns>,
 	options?: O,
 ) => {
 	return {
@@ -54,7 +55,7 @@ export const customSession = <
 					if (!session) {
 						return ctx.json(null);
 					}
-					const fnResult = await fn(session as any);
+					const fnResult = await fn(session as any, ctx.context);
 					return ctx.json(fnResult);
 				},
 			),

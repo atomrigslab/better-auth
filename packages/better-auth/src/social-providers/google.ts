@@ -102,18 +102,17 @@ export const google = (options: GoogleOptions) => {
 		refreshAccessToken: options.refreshAccessToken
 			? options.refreshAccessToken
 			: async (refreshToken) => {
-					return refreshAccessToken({
-						refreshToken,
-						options: {
-							clientId: options.clientId,
-							clientKey: options.clientKey,
-							clientSecret: options.clientSecret,
-						},
-						tokenEndpoint: "https://www.googleapis.com/oauth2/v4/token",
-					});
-				},
+				return refreshAccessToken({
+					refreshToken,
+					options: {
+						clientId: options.clientId,
+						clientKey: options.clientKey,
+						clientSecret: options.clientSecret,
+					},
+					tokenEndpoint: "https://www.googleapis.com/oauth2/v4/token",
+				});
+			},
 		async verifyIdToken(token, nonce, clientId) {
-			console.log("google verifyIdToken", {token, nonce, clientId})
 			if (options.disableIdTokenSignIn) {
 				return false;
 			}
@@ -133,7 +132,6 @@ export const google = (options: GoogleOptions) => {
 			if (!tokenInfo) {
 				return false;
 			}
-			console.log("verifyIdToken isValid", {tokenInfo, clientId, options})
 			const isValid =
 				(tokenInfo.aud === (clientId || options.clientId)) &&
 				(tokenInfo.iss === "https://accounts.google.com" ||

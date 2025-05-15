@@ -331,7 +331,7 @@ export type BetterAuthOptions = {
 			 *
 			 * This is useful for cleaning up user data
 			 */
-			afterDelete?: (user: User, request?: Request) => Promise<void>;
+			afterDelete?: (user: User, request?: Request, ctx?: AuthContext) => Promise<void>;
 		};
 	};
 	session?: {
