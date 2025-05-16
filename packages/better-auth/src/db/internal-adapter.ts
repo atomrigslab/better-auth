@@ -527,7 +527,6 @@ export const createInternalAdapter = (
 			accountId: string,
 			providerId: string,
 		) => {
-			console.log("findOAuthUser", {email, accountId, providerId})
 			const account = await adapter.findOne<Account>({
 				model: "account",
 				where: [
@@ -541,7 +540,6 @@ export const createInternalAdapter = (
 					},
 				],
 			});
-			console.log("findOAuthUser account", account)
 			if (account) {
 				const user = await adapter.findOne<User>({
 					model: "user",
@@ -552,7 +550,6 @@ export const createInternalAdapter = (
 						},
 					],
 				});
-				console.log("findOAuthUser user", user)
 				if (user) {
 					return {
 						user,
@@ -562,7 +559,6 @@ export const createInternalAdapter = (
 					return null;
 				}
 			} else {
-				console.log("findOAuthUser else")
 				const user = await adapter.findOne<User>({
 					model: "user",
 					where: [
@@ -572,7 +568,6 @@ export const createInternalAdapter = (
 						},
 					],
 				});
-				console.log("findOAuthUser user", user)
 				if (user) {
 					const accounts = await adapter.findMany<Account>({
 						model: "account",
@@ -583,7 +578,6 @@ export const createInternalAdapter = (
 							},
 						],
 					});
-					console.log("findOAuthUser accounts", accounts)
 					return {
 						user,
 						accounts: accounts || [],
