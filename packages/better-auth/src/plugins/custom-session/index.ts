@@ -15,7 +15,7 @@ export const customSession = <
 	fn: (session: {
 		user: InferUser<O>;
 		session: InferSession<O>;
-	}, ctx: AuthContext) => Promise<Returns>,
+	}, ctx: AuthContext, query?: { sessionOnly?: boolean; disableCookieCache?: boolean; disableRefresh?: boolean }) => Promise<Returns>,
 	options?: O,
 ) => {
 	return {
@@ -47,6 +47,13 @@ export const customSession = <
 										"Disable session refresh. Useful for checking session status, without updating the session",
 								})
 								.optional(),
+							sessionOnly: z
+								.boolean({
+									description:
+										"Return only session data without custom enrichment",
+								})
+								.or(z.string().transform((v) => v === "true"))
+								.optional(),
 						}),
 					),
 				},
@@ -55,7 +62,7 @@ export const customSession = <
 					if (!session) {
 						return ctx.json(null);
 					}
-					const fnResult = await fn(session as any, ctx.context);
+					const fnResult = await fn(session as any, ctx.context, ctx.query);
 					return ctx.json(fnResult);
 				},
 			),

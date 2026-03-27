@@ -12,11 +12,11 @@ export const db = new Pool({
 });
 
 export const auth = betterAuth({
-  appName: "Better Auth Demo",
+  appName: "Guildpal Auth",
   session: {
     cookieCache: {
       enabled: true,
-      maxAge: 5 * 60, // Cache duration in seconds
+      maxAge: parseInt(process.env.SESSION_CACHE_MAX_AGE || '300'),
     },
   },
   user: {

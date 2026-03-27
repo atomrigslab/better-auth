@@ -197,23 +197,33 @@ export const callbackOAuth = createAuthEndpoint(
 			session,
 			user,
 		});
-		const jwt = await getCustomJwtToken(c, user, {
-			jwt: {
-				expirationTime: '30d'
-			},
-		})
 		let toRedirectTo: string;
 		try {
 			const url = result.isRegister ? newUserURL || callbackURL : callbackURL;
-			const redirectURL = new URL(url.toString());
-			redirectURL.searchParams.set('token', jwt);
-			toRedirectTo = redirectURL.toString();
+			toRedirectTo = url.toString();
 		} catch {
-			const baseURL = result.isRegister ? newUserURL || callbackURL : callbackURL;
-			const separator = baseURL.includes('?') ? '&' : '?';
-			toRedirectTo = `${baseURL}${separator}token=${encodeURIComponent(jwt)}`;
+			toRedirectTo = result.isRegister
+				? newUserURL || callbackURL
+				: callbackURL;
 		}
 		throw c.redirect(toRedirectTo);
+		// const jwt = await getCustomJwtToken(c, user, {
+		// 	jwt: {
+		// 		expirationTime: '30d'
+		// 	},
+		// })
+		// let toRedirectTo: string;
+		// try {
+		// 	const url = result.isRegister ? newUserURL || callbackURL : callbackURL;
+		// 	const redirectURL = new URL(url.toString());
+		// 	redirectURL.searchParams.set('token', jwt);
+		// 	toRedirectTo = redirectURL.toString();
+		// } catch {
+		// 	const baseURL = result.isRegister ? newUserURL || callbackURL : callbackURL;
+		// 	const separator = baseURL.includes('?') ? '&' : '?';
+		// 	toRedirectTo = `${baseURL}${separator}token=${encodeURIComponent(jwt)}`;
+		// }
+		// throw c.redirect(toRedirectTo);
 	},
 );
 

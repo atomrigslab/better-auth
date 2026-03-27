@@ -156,7 +156,7 @@ export const mobile = () =>
           }
           const { token, nonce } = c.body.idToken;
           console.log("before mobile provider verifyIdToken", provider)
-          const valid = await provider.verifyIdToken(token, nonce, "104874438001-nddsi91qigg7hp9gk49rqopmgnp5kpr7.apps.googleusercontent.com");
+          const valid = await provider.verifyIdToken(token, nonce, provider?.clientId || "104874438001-nddsi91qigg7hp9gk49rqopmgnp5kpr7.apps.googleusercontent.com");
           if (!valid) {
             c.context.logger.error("Invalid id token", {
               provider: c.body.provider,
