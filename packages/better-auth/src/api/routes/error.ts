@@ -118,15 +118,12 @@ export const error = createAuthEndpoint(
 		},
 	},
 	async (c) => {
-        const query =
+		const query =
 			new URL(c.request?.url || "").searchParams.get("error") || "Unknown";
-		return c.redirect(`https://auth.openrpg.ai/auth-error?error=${query}`);
-		// const query =
-		// 	new URL(c.request?.url || "").searchParams.get("error") || "Unknown";
-		// return new Response(html(query), {
-		// 	headers: {
-		// 		"Content-Type": "text/html",
-		// 	},
-		// });
+		return new Response(html(query), {
+			headers: {
+				"Content-Type": "text/html",
+			},
+		});
 	},
 );
