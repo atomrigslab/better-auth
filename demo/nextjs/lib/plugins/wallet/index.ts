@@ -46,7 +46,18 @@ export const siwe = (options: SIWEPluginOptions) =>
   ({
     id: "siwe",
     schema: {
+      // user: {
+      //   fields: {
+      //     address: {
+      //       type: "string",
+      //       required: false,
+      //       defaultValue: "",
+      //       // unique: true
+      //     },
+      //   },
+      // },
       wallet: {
+        // modelName: "auth_wallet",
         fields: {
           userId: {
             type: "string",
@@ -70,6 +81,7 @@ export const siwe = (options: SIWEPluginOptions) =>
       },
     },
     endpoints: {
+      // Generate nonce endpoint
       nonce: createAuthEndpoint(
         "/sign-in/nonce",
         {
@@ -164,27 +176,93 @@ export const siwe = (options: SIWEPluginOptions) =>
 
             if (!wallet) {
               const tempEmail = `${ctx.body.address}@${process.env.BETTER_AUTH_URL}`;
+              // const ens = await getEnsName(wagmiConfig, {
+              // 	address: ctx.body.address as `0x${string}`,
+              // 	chainId: options.chainId ?? 1
+              // });
+
+              // const avatar = await getEnsAvatar(wagmiConfig, {
+              // 	name: (ens as string) ?? ctx.body.address,
+              // 	chainId: options.chainId ?? 1
+              // });
 
               user = await ctx.context.internalAdapter.createUser({
+                // name: ens ?? ctx.body.address,
+                // email: tempEmail,
+                // avatar: avatar ?? ''
                 name: ctx.body.address,
                 email: tempEmail,
                 address: ctx.body.address,
                 avatar: "",
+                // mid: 'fake-mid'
               });
 
               const id = generateId();
               const now = new Date().toISOString();
-              await db.query(
+              // const insertStatement = db
+              //   .prepare(
+              //     "INSERT INTO wallet (id, userId, name, address, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
+              //   )
+              //   .run(
+              //     id,
+              //     user.id,
+              //     walletName,
+              //     ctx.body.address,
+              //     new Date().toISOString(),
+              //     new Date().toISOString()
+              //   );
+              const result = await db.query(
                 'INSERT INTO wallet (id, "userId", name, address, "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
                 [id, user.id, walletName, ctx.body.address, now, now]
               );
+
+              // Return the inserted row
+              // user = result.rows[0];
+
+              // let user = db
+              //   .prepare("SELECT * FROM wallet WHERE address = ?")
+              //   .get(ctx.body.address);
+
+              // user = await ctx.context.internalAdapter.createUser({
+              // 	// name: ens ?? ctx.body.address,
+              // 	// email: tempEmail,
+              // 	// avatar: avatar ?? ''
+              // 	name: ctx.body.address,
+              // 	email: '',
+              // 	address: ctx.body.address,
+              // 	avatar: '',
+              // 	mid: 'fake-mid'
+              // });
             } else {
+              console.log("wallet exist", {
+                address: ctx.body.address,
+                wallet,
+              });
+              // user = await ctx.context.internalAdapter.updateUser(
+              //   user?.id,
+              //   {
+              //     address: ctx.body.address,
+              //   },
+              //   ctx
+              // );
+              // find user from address
+              // user = db
+              //   .prepare("SELECT * FROM user WHERE id = ?")
+              //   .get(wallet.userId);
+
+              // user = (
+              //   await db.query("SELECT * FROM user WHERE id = $1", [
+              //     wallet.userId,
+              //   ])
+              // ).rows[0];
+
               user = (
                 await db.query('SELECT * FROM "user" WHERE id = $1', [
                   wallet.userId
                 ])
               ).rows[0];
             }
+            console.log("verify user", user);
 
             const session = await ctx.context.internalAdapter.createSession(
               user?.id,
@@ -200,11 +278,13 @@ export const siwe = (options: SIWEPluginOptions) =>
                 },
               });
             }
+            console.log("session and user", { session, user });
 
             await setSessionCookie(ctx, { session, user });
 
             return ctx.json({ token: session.token });
           } catch (error: any) {
+            console.log("error message", error.message);
             if (error instanceof APIError) throw error;
             throw new APIError("UNAUTHORIZED", {
               message: "Something went wrong. Please try again later.",

@@ -426,6 +426,99 @@ describe("session storage", async () => {
 	});
 });
 
+describe("active-sessions list cleanup on session deletion (#1655)", async () => {
+	// Regression test for the fork bug where deleteSession removed the token key
+	// but left the token behind in the `active-sessions-{userId}` list, so a
+	// logged-out session lingered for up to the session TTL. Mirrors production
+	// config: secondaryStorage + storeSessionInDatabase: true. We assert on the
+	// observable state of the secondaryStorage fake, not on internal calls.
+	let store = new Map<string, string>();
+	const { client, signInWithTestUser } = await getTestInstance({
+		secondaryStorage: {
+			set(key, value) {
+				store.set(key, value);
+			},
+			get(key) {
+				return store.get(key) || null;
+			},
+			delete(key) {
+				store.delete(key);
+			},
+		},
+		session: {
+			storeSessionInDatabase: true,
+		},
+		rateLimit: {
+			enabled: false,
+		},
+	});
+
+	const listKey = (userId: string) => `active-sessions-${userId}`;
+	const tokensInList = (userId: string): string[] => {
+		const raw = store.get(listKey(userId));
+		return raw
+			? (JSON.parse(raw) as { token: string }[]).map((s) => s.token)
+			: [];
+	};
+
+	it("signOut prunes the token and deletes the now-empty list key", async () => {
+		store.clear();
+		const { headers } = await signInWithTestUser();
+		const session = await client.getSession({ fetchOptions: { headers } });
+		const userId = session.data!.session.userId;
+		const token = session.data!.session.token;
+
+		// Sanity: the list registered the freshly created session.
+		expect(tokensInList(userId)).toContain(token);
+
+		await client.signOut({ fetchOptions: { headers } });
+
+		// The token is pruned, and since it was the only session the list key
+		// is removed entirely rather than left as an empty shell.
+		expect(store.has(listKey(userId))).toBe(false);
+	});
+
+	it("signOut prunes only the target token when other sessions survive", async () => {
+		store.clear();
+		const first = await signInWithTestUser();
+		const second = await signInWithTestUser();
+
+		const firstSession = await client.getSession({
+			fetchOptions: { headers: first.headers },
+		});
+		const secondSession = await client.getSession({
+			fetchOptions: { headers: second.headers },
+		});
+		const userId = firstSession.data!.session.userId;
+		const firstToken = firstSession.data!.session.token;
+		const secondToken = secondSession.data!.session.token;
+
+		expect(tokensInList(userId)).toEqual(
+			expect.arrayContaining([firstToken, secondToken]),
+		);
+
+		await client.signOut({ fetchOptions: { headers: first.headers } });
+
+		// The list survives, minus only the signed-out token.
+		const remaining = tokensInList(userId);
+		expect(remaining).toContain(secondToken);
+		expect(remaining).not.toContain(firstToken);
+	});
+
+	it("revokeSessions clears the whole list key", async () => {
+		store.clear();
+		const { headers } = await signInWithTestUser();
+		const session = await client.getSession({ fetchOptions: { headers } });
+		const userId = session.data!.session.userId;
+
+		expect(store.has(listKey(userId))).toBe(true);
+
+		await client.revokeSessions({ fetchOptions: { headers } });
+
+		expect(store.has(listKey(userId))).toBe(false);
+	});
+});
+
 describe("cookie cache", async () => {
 	const database: MemoryDB = {
 		user: [],
