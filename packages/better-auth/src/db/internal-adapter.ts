@@ -441,6 +441,44 @@ export const createInternalAdapter = (
 		},
 		deleteSession: async (token: string) => {
 			if (secondaryStorage) {
+				// Remove the revoked session from the user's active-sessions list
+				// before deleting the token key. Backport of upstream better-auth
+				// PR #3820 (issue #3819): the token blob is the only place the
+				// userId is recorded, so it must be read first.
+				const data = await secondaryStorage.get(token);
+				if (data) {
+					const parsed = safeJSONParse<{ session: Session; user: User }>(data);
+					const userId = parsed?.session?.userId;
+					if (userId) {
+						const currentList = await secondaryStorage.get(
+							`active-sessions-${userId}`,
+						);
+						if (currentList) {
+							const now = Date.now();
+							const list = (
+								safeJSONParse<{ token: string; expiresAt: number }[]>(
+									currentList,
+								) || []
+							).filter((s) => s.expiresAt > now && s.token !== token);
+
+							if (list.length > 0) {
+								// Re-apply a TTL that reaches the furthest-out survivor.
+								const ttl = Math.ceil(
+									(Math.max(...list.map((s) => s.expiresAt)) - now) / 1000,
+								);
+								await secondaryStorage.set(
+									`active-sessions-${userId}`,
+									JSON.stringify(list),
+									ttl,
+								);
+							} else {
+								// No sessions left: drop the list key so no empty shell lingers.
+								await secondaryStorage.delete(`active-sessions-${userId}`);
+							}
+						}
+					}
+				}
+
 				await secondaryStorage.delete(token);
 
 				if (
@@ -495,6 +533,12 @@ export const createInternalAdapter = (
 					for (const session of sessions) {
 						await secondaryStorage.delete(session.token);
 					}
+					// Also drop the list key itself so no empty shell lingers under
+					// its TTL. (Hygiene improvement beyond upstream, which still
+					// leaves this key behind — see issue #1655.)
+					await secondaryStorage.delete(
+						`active-sessions-${userIdOrSessionTokens}`,
+					);
 				} else {
 					for (const sessionToken of userIdOrSessionTokens) {
 						const session = await secondaryStorage.get(sessionToken);
