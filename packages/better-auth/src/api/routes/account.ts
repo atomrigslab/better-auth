@@ -86,6 +86,23 @@ export const linkSocialAccount = createAuthEndpoint(
 				})
 				.optional(),
 			/**
+			 * Callback URL to redirect to if the link is rejected.
+			 *
+			 * Declared here for the same reason `/sign-in/social` declares it: the
+			 * body is parsed by the schema above, so a field the schema does not
+			 * name is dropped before `generateState` can park it in the state. The
+			 * OAuth callback then finds no `errorURL` and falls back to this
+			 * server's own error page, which cannot explain the rejection to the
+			 * caller. Validated against `trustedOrigins` by `originCheckMiddleware`
+			 * like every other redirect target in a request body.
+			 */
+			errorCallbackURL: z
+				.string({
+					description:
+						"The URL to redirect to if there is an error during the link process",
+				})
+				.optional(),
+			/**
 			 * OAuth2 provider to use
 			 */
 			provider: z.enum(socialProviderList, {
