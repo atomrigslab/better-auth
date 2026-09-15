@@ -120,6 +120,28 @@ export const error = createAuthEndpoint(
 	async (c) => {
 		const query =
 			new URL(c.request?.url || "").searchParams.get("error") || "Unknown";
+		/**
+		 * An app that named its own error screen never sees the page below.
+		 *
+		 * `onAPIError.errorURL` already decides where a named failure lands
+		 * (`api/routes/callback.ts`, `plugins/generic-oauth`), but the failures
+		 * raised before a state can be read — a replayed or expired state in
+		 * `oauth2/state.ts`, a link that could not be written in
+		 * `oauth2/link-account.ts` — redirect straight here instead, and this
+		 * page is the one screen the app cannot style, translate, or navigate
+		 * away from: its only control is `<a href="/">` on the auth origin,
+		 * which in a split-origin deployment is not the app at all.
+		 *
+		 * So the same option answers for this route too. The code rides along,
+		 * because it is the only thing the app can act on.
+		 */
+		const errorURL = c.context.options.onAPIError?.errorURL;
+		if (errorURL) {
+			const separator = errorURL.includes("?") ? "&" : "?";
+			throw c.redirect(
+				`${errorURL}${separator}error=${encodeURIComponent(query)}`,
+			);
+		}
 		return new Response(html(query), {
 			headers: {
 				"Content-Type": "text/html",
